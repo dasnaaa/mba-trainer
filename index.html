@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Digital Business — Lerntool</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg:#0f1419; --panel:#1a2029; --panel2:#232b36;
+    --accent:#4a9eff; --accent-dim:#2d5a8a;
+    --green:#3ecf8e; --amber:#f0a742; --red:#ff6b6b;
+    --text:#e6ebf0; --text-dim:#8a97a5; --border:#2d3542; --wortlich:#f0a742;
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--text); min-height:100vh;
+    padding:18px; display:flex; justify-content:center;
+  }
+  .app { width:100%; max-width:720px; }
+
+  header { margin-bottom:14px; }
+  h1 { font-size:19px; font-weight:700; letter-spacing:-0.3px; }
+  h1 span { color:var(--accent); }
+  .sub { color:var(--text-dim); font-size:12.5px; margin-top:3px; }
+
+  /* segmented mode switch */
+  .modeswitch {
+    display:flex; background:var(--panel); border:1px solid var(--border);
+    border-radius:10px; padding:4px; margin:14px 0; gap:4px;
+  }
+  .modeswitch button {
+    flex:1; padding:10px; border:none; border-radius:7px; background:transparent;
+    color:var(--text-dim); font-size:13.5px; font-weight:600; cursor:pointer;
+    transition:all 0.15s;
+  }
+  .modeswitch button.active { background:var(--accent-dim); color:#fff; }
+
+  .controls {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:12px; padding:13px; margin-bottom:14px;
+  }
+  .chapters { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:11px; }
+  .chip {
+    background:var(--panel2); border:1px solid var(--border); color:var(--text-dim);
+    padding:6px 10px; border-radius:20px; font-size:12px; cursor:pointer;
+    transition:all 0.15s; user-select:none;
+  }
+  .chip:active { transform:scale(0.96); }
+  .chip.active { background:var(--accent-dim); border-color:var(--accent); color:#fff; }
+
+  .toggles { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .btn {
+    background:var(--panel2); border:1px solid var(--border); color:var(--text);
+    padding:8px 12px; border-radius:8px; font-size:12.5px; cursor:pointer;
+    transition:all 0.15s; user-select:none;
+  }
+  .btn:active { transform:scale(0.97); }
+  .btn.on { background:var(--accent-dim); border-color:var(--accent); }
+  .spacer { flex:1; }
+
+  .progress-wrap { margin:13px 0 2px; }
+  .progress-bar { height:7px; background:var(--panel2); border-radius:4px; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--green),#52d9a0); width:0%; transition:width 0.3s; }
+  .progress-text { display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px; font-size:12px; color:var(--text-dim); margin-top:6px; }
+
+  /* ---- Flashcards ---- */
+  .card-area { perspective:1600px; margin-bottom:13px; }
+  .card { position:relative; width:100%; min-height:300px; transition:transform 0.5s; transform-style:preserve-3d; cursor:pointer; }
+  .card.flipped { transform:rotateY(180deg); }
+  .face {
+    position:absolute; width:100%; height:100%; min-height:300px;
+    backface-visibility:hidden; -webkit-backface-visibility:hidden;
+    border-radius:16px; border:1px solid var(--border); padding:24px;
+    display:flex; flex-direction:column;
+  }
+  .front { background:var(--panel); }
+  .back { background:var(--panel2); transform:rotateY(180deg); }
+  .face-label { font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-dim); margin-bottom:4px; }
+  .chap-tag { display:inline-block; font-size:11px; color:var(--accent); margin-bottom:12px; font-weight:600; }
+  .wortlich-badge {
+    display:inline-block; font-size:10px; text-transform:uppercase; letter-spacing:0.8px;
+    color:var(--wortlich); border:1px solid var(--wortlich); border-radius:4px;
+    padding:2px 6px; margin-left:8px; vertical-align:middle;
+  }
+  .q-text { font-size:19px; font-weight:600; line-height:1.4; flex:1; display:flex; align-items:center; }
+  .a-text { font-size:15.5px; line-height:1.55; flex:1; display:flex; align-items:center; color:var(--text); }
+  .flip-hint { font-size:12px; color:var(--text-dim); margin-top:14px; text-align:center; }
+
+  .nav { display:flex; gap:8px; flex-wrap:wrap; }
+  .nav-btn {
+    flex:1 1 45%; min-width:120px; padding:13px; border-radius:10px; border:1px solid var(--border);
+    background:var(--panel); color:var(--text); font-size:14px; cursor:pointer; transition:all 0.15s;
+  }
+  .nav-btn:active { transform:scale(0.98); }
+  .nav-btn:disabled { opacity:0.35; }
+  .mark-known { background:rgba(62,207,142,0.12); border-color:var(--green); color:var(--green); }
+  .mark-review { background:rgba(240,167,66,0.12); border-color:var(--amber); color:var(--amber); }
+  .counter { font-size:13px; color:var(--text-dim); text-align:center; margin-top:11px; }
+  .status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .dot-known { background:var(--green); } .dot-review { background:var(--amber); } .dot-new { background:var(--text-dim); }
+  .kbd-hint { font-size:11px; color:var(--text-dim); text-align:center; margin-top:12px; line-height:1.7; }
+  .kbd { background:var(--panel2); border:1px solid var(--border); border-radius:4px; padding:1px 6px; font-family:monospace; font-size:11px; }
+  .empty { text-align:center; padding:50px 18px; color:var(--text-dim); }
+  .empty strong { color:var(--green); font-size:18px; display:block; margin-bottom:8px; }
+
+  /* ---- MC Trainer ---- */
+  .mc-card { background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:22px; }
+  .mc-instruction { font-size:12px; color:var(--amber); margin-bottom:10px; font-weight:600; }
+  .mc-q { font-size:18px; font-weight:600; line-height:1.4; margin-bottom:18px; }
+  .mc-opts { display:flex; flex-direction:column; gap:9px; }
+  .opt {
+    display:flex; align-items:flex-start; gap:11px; padding:13px 14px;
+    background:var(--panel2); border:1.5px solid var(--border); border-radius:10px;
+    cursor:pointer; transition:all 0.12s; font-size:14.5px; line-height:1.4;
+  }
+  .opt:active { transform:scale(0.99); }
+  .opt .box {
+    flex-shrink:0; width:20px; height:20px; border:2px solid var(--text-dim);
+    border-radius:5px; margin-top:1px; display:flex; align-items:center; justify-content:center;
+    font-size:13px; color:#fff; transition:all 0.12s;
+  }
+  .opt.sel { border-color:var(--accent); background:rgba(74,158,255,0.10); }
+  .opt.sel .box { background:var(--accent); border-color:var(--accent); }
+  .opt.correct { border-color:var(--green); background:rgba(62,207,142,0.12); }
+  .opt.correct .box { background:var(--green); border-color:var(--green); }
+  .opt.missed { border-color:var(--green); border-style:dashed; }
+  .opt.wrong { border-color:var(--red); background:rgba(255,107,107,0.10); }
+  .opt.wrong .box { background:var(--red); border-color:var(--red); }
+  .opt .tag-mini { font-size:10px; text-transform:uppercase; letter-spacing:0.5px; margin-left:6px; opacity:0.85; }
+
+  .mc-actions { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
+  .mc-btn { flex:1 1 45%; min-width:130px; padding:13px; border-radius:10px; border:none; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.15s; }
+  .mc-btn:active { transform:scale(0.98); }
+  .mc-check { background:var(--accent); color:#fff; }
+  .mc-check:disabled { opacity:0.4; }
+  .mc-next { background:var(--panel2); color:var(--text); border:1px solid var(--border); }
+
+  .mc-feedback { margin-top:15px; padding:14px; border-radius:10px; font-size:13.5px; line-height:1.5; display:none; }
+  .mc-feedback.show { display:block; }
+  .fb-good { background:rgba(62,207,142,0.10); border:1px solid var(--green); color:var(--text); }
+  .fb-under { background:rgba(240,167,66,0.10); border:1px solid var(--amber); color:var(--text); }
+  .fb-wrong { background:rgba(255,107,107,0.10); border:1px solid var(--red); color:var(--text); }
+  .fb-score { font-weight:700; font-size:15px; }
+
+  .mc-stats { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .stat { flex:1 1 30%; min-width:90px; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:11px; text-align:center; }
+  .stat .num { font-size:20px; font-weight:700; }
+  .stat .lbl { font-size:11px; color:var(--text-dim); margin-top:2px; }
+  .num-green { color:var(--green); } .num-amber { color:var(--amber); } .num-accent { color:var(--accent); }
+  .mc-counter { text-align:center; font-size:13px; color:var(--text-dim); margin-top:12px; }
+
+  .hidden { display:none !important; }
+
+  /* ---- Sync ---- */
+  .syncbar {
+    display:flex; align-items:center; gap:9px;
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:10px; padding:9px 11px; margin-bottom:12px;
+  }
+  .sync-dot { width:9px; height:9px; border-radius:50%; background:var(--text-dim); flex-shrink:0; }
+  .sync-dot.ok { background:var(--green); }
+  .sync-dot.err { background:var(--red); }
+  .sync-dot.busy { background:var(--amber); }
+  .sync-text { font-size:12.5px; color:var(--text-dim); }
+  .syncpanel {
+    display:none; background:var(--panel); border:1px solid var(--border);
+    border-radius:12px; padding:13px; margin-bottom:14px;
+  }
+  .syncpanel.open { display:block; }
+  .sync-hint { font-size:12.5px; color:var(--text-dim); line-height:1.5; margin-bottom:10px; }
+  .sync-hint code { background:var(--panel2); padding:1px 5px; border-radius:4px; }
+  .sync-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .sync-row input {
+    flex:1 1 160px; background:var(--panel2); border:1px solid var(--border);
+    color:var(--text); border-radius:8px; padding:9px 11px; font-size:13.5px;
+  }
+  .sync-row input:focus { outline:none; border-color:var(--accent); }
+  .sync-msg { font-size:12.5px; margin-top:10px; line-height:1.5; }
+  .sync-msg.ok { color:var(--green); }
+  .sync-msg.err { color:var(--red); }
+
+  @media (max-width:560px){
+    body { padding:12px; }
+    h1 { font-size:17px; }
+    .face, .card, .face.back, .card-area .face { min-height:280px; }
+    .face { padding:20px; }
+    .q-text { font-size:17px; }
+    .a-text { font-size:14.5px; }
+    .mc-q { font-size:16.5px; }
+    .opt { font-size:13.5px; padding:12px; }
+    .nav-btn, .mc-btn { flex:1 1 100%; }
+    .kbd-hint { display:none; }
+    .controls { padding:11px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Digital <span>Business</span> — Lerntool</h1>
+    <div class="sub">M1-LV1 · komplettes Skriptum</div>
+  </header>
+
+  <div class="modeswitch">
+    <button id="modeFlash" class="active">📇 Karteikarten</button>
+    <button id="modeMc">✅ MC-Trainer</button>
+  </div>
+
+  <div class="syncbar">
+    <span class="sync-dot" id="syncDot"></span>
+    <span class="sync-text" id="syncText">Lernstand: nur auf diesem Gerät</span>
+    <span class="spacer"></span>
+    <button class="btn" id="syncCog">⚙︎ Sync</button>
+  </div>
+  <div class="syncpanel" id="syncPanel">
+    <div class="sync-hint">Sync-Token eingeben (dasselbe wie in Cloudflare unter <code>SYNC_TOKEN</code> hinterlegt) — dann wird dein Lernstand serverseitig gespeichert und über alle Geräte synchronisiert.</div>
+    <div class="sync-row">
+      <input type="password" id="syncToken" placeholder="Sync-Token" autocomplete="off">
+      <button class="btn" id="syncSave">Verbinden</button>
+    </div>
+    <div class="sync-row" style="margin-top:8px;">
+      <button class="btn" id="syncPull">↓ Vom Server laden</button>
+      <button class="btn" id="syncPush">↑ Jetzt hochladen</button>
+      <button class="btn" id="syncOff">Trennen</button>
+    </div>
+    <div class="sync-msg" id="syncMsg"></div>
+  </div>
+
+  <!-- ============ FLASHCARD MODE ============ -->
+  <div id="flashMode">
+    <div class="controls">
+      <div class="chapters" id="chapters"></div>
+      <div class="toggles">
+        <button class="btn" id="shuffleBtn">🔀 Mischen</button>
+        <button class="btn" id="reviewBtn">Nur offene</button>
+        <button class="btn" id="wortlichBtn">Nur „wörtlich"</button>
+        <span class="spacer"></span>
+        <button class="btn" id="resetBtn">Zurücksetzen</button>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+        <div class="progress-text">
+          <span id="progLabel">0 von 0 sitzt</span>
+          <span id="reviewLabel"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-area">
+      <div class="card" id="card">
+        <div class="face front">
+          <div class="chap-tag" id="frontChap"></div>
+          <div class="face-label">Frage</div>
+          <div class="q-text" id="qText"></div>
+          <div class="flip-hint">Tippen zum Umdrehen</div>
+        </div>
+        <div class="face back">
+          <div class="chap-tag" id="backChap"></div>
+          <div class="face-label">Antwort</div>
+          <div class="a-text" id="aText"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button class="nav-btn" id="prevBtn">← Zurück</button>
+      <button class="nav-btn mark-review" id="reviewCardBtn">Nochmal</button>
+      <button class="nav-btn mark-known" id="knownBtn">Sitzt ✓</button>
+      <button class="nav-btn" id="nextBtn">Weiter →</button>
+    </div>
+    <div class="counter">
+      <span id="statusDot" class="status-dot dot-new"></span>
+      <span id="counter">0 / 0</span>
+    </div>
+    <div class="kbd-hint">
+      <span class="kbd">←</span> <span class="kbd">→</span> blättern ·
+      <span class="kbd">Leertaste</span> umdrehen ·
+      <span class="kbd">K</span> sitzt · <span class="kbd">N</span> nochmal
+    </div>
+  </div>
+
+  <!-- ============ MC MODE ============ -->
+  <div id="mcMode" class="hidden">
+    <div class="controls">
+      <div class="chapters" id="mcChapters"></div>
+      <div class="toggles">
+        <button class="btn" id="mcShuffle">🔀 Neue Runde</button>
+        <span class="spacer"></span>
+        <button class="btn" id="mcReset">Statistik löschen</button>
+      </div>
+    </div>
+
+    <div class="mc-stats">
+      <div class="stat"><div class="num num-accent" id="mcDone">0</div><div class="lbl">beantwortet</div></div>
+      <div class="stat"><div class="num num-green" id="mcAvg">–</div><div class="lbl">Ø Punkte</div></div>
+      <div class="stat"><div class="num num-amber" id="mcUnder">0</div><div class="lbl">zu wenig gewählt</div></div>
+    </div>
+
+    <div class="mc-card">
+      <div class="mc-instruction">Mehrfachauswahl — mehrere Antworten können richtig sein. Prüfe jede Option einzeln.</div>
+      <div class="chap-tag" id="mcChap"></div>
+      <div class="mc-q" id="mcQ"></div>
+      <div class="mc-opts" id="mcOpts"></div>
+      <div class="mc-actions">
+        <button class="mc-btn mc-check" id="mcCheck" disabled>Prüfen</button>
+        <button class="mc-btn mc-next hidden" id="mcNext">Nächste →</button>
+      </div>
+      <div class="mc-feedback" id="mcFb"></div>
+    </div>
+    <div class="mc-counter" id="mcCounter">1 / 0</div>
+  </div>
+</div>
+
+<script>
+/* ===================== FLASHCARD DATA ===================== */
+const CARDS = [
+  {c:"1 · Grundlagen", q:"Unterschied Digitalisierung vs. Digitale Transformation?", a:"Digitalisierung = Umwandlung analoger Inhalte in digitale Formate (Bits & Bytes). Digitale Transformation = der gesellschaftliche Wandel als Folgewirkung; sie muss strategisch gestaltet werden und steht für die vierte industrielle Revolution.", w:true},
+  {c:"1 · Grundlagen", q:"Was bedeutet „Konvergenz“ in der digitalen Transformation?", a:"Das Zusammenfließen unterschiedlicher Technologien, Branchen und Prozesse zu neuen, integrierten Formen. Grenzen zwischen physisch und digital verschwimmen; KI, IoT, Blockchain existieren nicht isoliert, sondern in einem sich verstärkenden Ökosystem.", w:true},
+  {c:"1 · Grundlagen", q:"Was ist das historisch Einzigartige der vierten industriellen Revolution?", a:"Zum ersten Mal werden Arbeitsplätze ERSATZLOS gestrichen — und auch Wissensarbeiter:innen sind zunehmend betroffen (v. a. durch generative KI).", w:true},
+  {c:"1 · Grundlagen", q:"Was sind Rückkopplungseffekte im Kontext technologischer Innovation?", a:"Technologische Innovation verändert Organisationsstrukturen, Marktlogiken und Gesellschaften — und die daraus folgenden gesellschaftlichen/politischen Debatten wirken wiederum auf Technologieentscheidungen zurück. Dadurch erhalten Entscheidungen strategische Qualität."},
+
+  {c:"2 · Arbeitsmarkt", q:"Die vier industriellen Revolutionen — je Leittechnologie?", a:"1. Dampfkraft/Mechanisierung (~1750). 2. Elektrizität/Fließband (~1900). 3. EDV/PC/Internet, Digitalisierung (~1970). 4. Intelligente Automation: IoT, KI, Big Data, Cloud (~2020).", w:true},
+  {c:"2 · Arbeitsmarkt", q:"Was meint Schumpeters „schöpferische Zerstörung“?", a:"Eine makroökonomische Theorie, die erklärt, dass sich Märkte ständig wandeln: Neues verdrängt Bewährtes. Der Wandel ist die einzige Konstante — die Essenz des Kapitalismus.", w:true},
+  {c:"2 · Arbeitsmarkt", q:"Wie nennt Schumpeter die radikale strukturelle Veränderung von Branchen im Zeitverlauf?", a:"Industrielle Mutation. (Zweiter zentraler Begriff Schumpeters neben der „schöpferischen Zerstörung“.)", w:true},
+  {c:"2 · Arbeitsmarkt", q:"Rifkins drei Vorbedingungen jeder neuen industriellen Revolution?", a:"1. Neue Kommunikationstechnologien, 2. neue Energiesysteme, 3. daraus etabliert sich eine neue Infrastruktur."},
+  {c:"2 · Arbeitsmarkt", q:"Was beschreibt die Totale Faktorproduktivität (TFP) nach Solow?", a:"Den technologischen Fortschritt als zentralen Treiber der Produktivitätssteigerung. Nach Abramovitz auch „Kennzahl des Unwissens“. Im Skript: Output steigt, obwohl Input sinkt.", w:true},
+  {c:"2 · Arbeitsmarkt", q:"Die drei klassischen Produktionsfaktoren nach Adam Smith?", a:"Arbeit, Boden, Kapital. (Smith gilt als Begründer der Nationalökonomie. Das Skript ergänzt sie um den Faktor (Informations-)Technologie.)", w:true},
+  {c:"2 · Arbeitsmarkt", q:"Über welche zwei Werte verfügt jedes Produkt in der Marktwirtschaft?", a:"Gebrauchswert und Tauschwert (Adam Smith).", w:true},
+  {c:"2 · Arbeitsmarkt", q:"Wie heißt die Theorie: Wert entsteht durch die gesellschaftlich aufgewandte Arbeit?", a:"Arbeitswerttheorie (objektive Werttheorie). Smith sieht die investierte Arbeit als zentrale Produktivitätskraft.", w:true},
+  {c:"2 · Arbeitsmarkt", q:"Produktive vs. unproduktive Arbeit bei Smith?", a:"Produktive Arbeit generiert Wert durch Produktion eines Gutes. Unproduktive Arbeit materialisiert sich nicht in einem Gut (Schauspieler, Redner, Musiker — Leistung vergeht im Moment der Produktion). Beschreibt treffend ML, Big Data, KI."},
+  {c:"2 · Arbeitsmarkt", q:"Definition Wissensarbeit (North & Güldenberg)?", a:"Eine auf kognitiven Fähigkeiten basierende Tätigkeit mit immateriellem Arbeitsergebnis — Wertschöpfung durch Verarbeitung von Informationen, Kreativität und Generierung/Kommunikation von Wissen."},
+  {c:"2 · Arbeitsmarkt", q:"Wofür steht VUCA?", a:"Volatility, Uncertainty, Complexity, Ambiguity. Erklärt, warum Unternehmen sich agil/flexibel organisieren müssen. Über 40 Jahre alt — laut Cascio veraltet."},
+  {c:"2 · Arbeitsmarkt", q:"Wofür steht BANI (Cascio) und was bedeuten die Teile?", a:"Brittle (brüchig/spröde bis zum Bruchpunkt), Anxious (Angst, Entscheidungen zu treffen), Nonlinear (unverhältnismäßige Ursache-Wirkung), Incomprehensible (unverständlich/nicht prognostizierbar). Nachfolger von VUCA.", w:true},
+  {c:"2 · Arbeitsmarkt", q:"Definition Gig Economy (Kuhn & Galloway)?", a:"Elektronisch vermittelte Beschäftigungsformen, bei denen Einzelne über Websites/Apps kurzfristige Aufgaben oder Projekte finden, die sie mit Kunden verbinden und die Bezahlung abwickeln.", w:true},
+  {c:"2 · Arbeitsmarkt", q:"Was sind Platform Workers — und warum stehen sie in Konkurrenz?", a:"Menschen, die über Service-Plattformen Leistungen anbieten. Keine klassischen Angestellten, sondern isolierte Freiberufler. Überangebot an Arbeitern + Unterangebot an Nachfrage → erhöhte Konkurrenzsituation, prekäre Bedingungen."},
+  {c:"2 · Arbeitsmarkt", q:"Warum funktioniert Uber trotz Überangebot an Fahrern (Angebot > Nachfrage)?", a:"Wegen des Netzwerkeffekts: Der Wert der Plattform steigt mit jedem weiteren Nutzer. Auch die Fahrer gelten als Kunden/Endnutzer; das Businessmodell baut auf Abhängigkeit (AGB, Datensammlung).", w:true},
+  {c:"2 · Arbeitsmarkt", q:"Was ist algorithmisches Management?", a:"Arbeitsaufgaben werden nicht von einem Menschen in einer Zentrale, sondern von einer KI sortiert, kalkuliert und kommuniziert. Platform Workers sind ihm direkt ausgesetzt."},
+  {c:"2 · Arbeitsmarkt", q:"Was meint „Gouvernementalität“ (Foucault) bei Plattformarbeit?", a:"Nicht nur Führung durch eine Institution, sondern die Selbstführung der Nutzer innerhalb des Systems — durch Bewertungssysteme und Algorithmen wird Verhalten vorstrukturiert und rationalisiert (z. B. Fahren zu Stoßzeiten).", w:true},
+  {c:"2 · Arbeitsmarkt", q:"Was ist Surge Pricing?", a:"Dynamische Preisgestaltung als „soft control“ über das Fahrerverhalten — institutionalisiertes Nudging (neben Heatmaps, Incentives, häufigem Messaging)."},
+  {c:"2 · Arbeitsmarkt", q:"Warum ist Uber kein Taxi-Unternehmen?", a:"Uber versteht sich als Technologiekonzern / Intermediär zwischen Angebot und Nachfrage einer On-Demand-Gesellschaft. Es besitzt keine Autos — analog zu AirBnB (keine Immobilien)."},
+  {c:"2 · Arbeitsmarkt", q:"Warum eignet sich autonomes Fahren als Signal für die Zukunft des Arbeitsmarkts?", a:"Es zeigt Konvergenzen (Auto = Kind der Informationstechnologie, nicht des Autobaus) UND das ersatzlose Streichen von Berufen sinnbildlich auf."},
+  {c:"2 · Arbeitsmarkt", q:"Was bedeutet Knappheit in der Marktwirtschaft?", a:"Es findet sich weniger Angebot als Wünsche nach Ressourcen, Gütern oder Dienstleistungen. Im Regelfall ist weniger Angebot als Nachfrage vorhanden — deshalb braucht es ein marktwirtschaftliches Ausgleichsverfahren.", w:true},
+  {c:"2 · Arbeitsmarkt", q:"Warum sinkt der menschliche Anteil an der Wertschöpfung weiter? (3 Gründe)", a:"1. Immer mehr Tätigkeiten werden automatisiert. 2. Grenzkosten für technologische Lösungen sinken. 3. Effizienzgewinne durch moderne Technologie steigen rasant."},
+  {c:"2 · Arbeitsmarkt", q:"Welche Institutionen haben bekannte Studien zur Zukunft der Arbeit veröffentlicht?", a:"McKinsey Global Institute, OECD, Oxford Martin School (University of Oxford).", w:true},
+
+  {c:"3 · Beschleuniger", q:"Was bedeutet First Mover Advantage — und was ist die Kritik daran?", a:"Dominierende Marktposition durch fehlende Alternative bei Einführung. Kritik: Oft trifft der Vorteil auf den ZWEITEN zu — der echte First Mover scheitert, der Zweite lernt aus Fehlern (Google > Yahoo, Facebook > MySpace).", w:true},
+  {c:"3 · Beschleuniger", q:"Worin waren Google und Facebook laut Skript zweifellos First Mover?", a:"In der Etablierung von tragfähigen Geschäftsmodellen (nicht chronologisch als Produkt)."},
+  {c:"3 · Beschleuniger", q:"Was war das ARPANET?", a:"Vorgänger des Internets (1969), von der US-Behörde ARPA (Advanced Research Projects Agency) im Kalten Krieg entwickelt. Zunächst 4 US-Unis, ab 1973 in Europa. Brachte bereits E-Mail und FTP."},
+  {c:"3 · Beschleuniger", q:"Wer erfand wann das World Wide Web — und wo?", a:"Tim Berners-Lee, 1989, am CERN (Genf). Auch http und HTML. WWW ab 30. April 1993 öffentlich. Er verstand es als soziale, nicht rein technische Schöpfung."},
+  {c:"3 · Beschleuniger", q:"Web 1.0 vs. 2.0 vs. 3.0 vs. 4.0?", a:"1.0: statische Websites, Hyperlinks, Gratis-Kultur. 2.0: User-Generated-Content, soziales Web. 3.0: semantisches Netz, dezentral (Blockchain), Echtzeitweb. 4.0: symbiotisches Netz (ML + KI).", w:true},
+  {c:"3 · Beschleuniger", q:"Wer prägte „Web 2.0“ und wie definierte er es?", a:"Tim O´Reilly: das Netzwerk als Plattform, basierend auf Nutzung von Daten, Netzwerkeffekt durch „Architektur der Beteiligung“ → kollektive Intelligenz.", w:true},
+  {c:"3 · Beschleuniger", q:"Was ist der „Value Gap“?", a:"Wertschöpfungslücke: Diskrepanz zwischen dem monetären Wert, den ein digitales Gut auf Distributionsplattformen generiert, und dem tatsächlich an die Rechteinhaber ausgezahlten Gegenwert."},
+  {c:"3 · Beschleuniger", q:"Was ist ein Prosumer?", a:"Nutzer, die durch Plattformen vom passiven Empfänger zum einflussreichen Sender/Produzenten werden. Klassische Intermediäre verlieren Macht."},
+  {c:"3 · Beschleuniger", q:"Wie hat sich die wöchentliche Hausarbeitszeit durch Haushaltsgeräte verändert?", a:"Von 68 Std./Woche (1900) auf 15 Std. 24 Min. — durch Waschmaschine, Kühlschrank, Staubsauger etc. Folge: gesellschaftliche Dynamik, tradierte Rollenbilder gerieten ins Wanken."},
+
+  {c:"4 · Technologien", q:"Was ist die Innovation Map (Envisioning) und der TRL?", a:"105 visionäre Technologien, bewertet nach NASA-TRL (Technology Readiness Level) 1–9. Geclustert in 5 Trends: Daten-Ära, Menschliche Fortentwicklung, Energie & Nachhaltigkeit, Agrartechnologie & Ernährung, Smart Living."},
+  {c:"4 · Technologien", q:"Definition IoT (Internet der Dinge)?", a:"Internetbasierte Vernetzung physischer/digitaler Produkte, Dienstleistungen, Maschinen, Sensoren und Menschen (Wirtz). Objekte sammeln, tauschen Daten und reagieren. Kernmerkmale: Vernetzung, Automatisierung, Intelligenz, Interaktivität.", w:true},
+  {c:"4 · Technologien", q:"Welche drei Technologien braucht das IoT, um Nutzen zu stiften?", a:"Big Data, Cloud Computing und Künstliche Intelligenz.", w:true},
+  {c:"4 · Technologien", q:"Was ist Predictive Maintenance?", a:"IoT-Anwendung in Industrie 4.0: Sensoren an Maschinen sammeln Betriebsdaten, um Ausfälle vorherzusagen und Wartung zu planen."},
+  {c:"4 · Technologien", q:"Ab wann spricht man von Big Data?", a:"Wenn übliche Verfahren der Datenverarbeitung nicht mehr ausreichen — Datenmenge zu groß oder zu unstrukturiert. Datenvolumen verdoppelt sich ca. alle zwei Jahre.", w:true},
+  {c:"4 · Technologien", q:"Was ist Predictive Analytics?", a:"Datenanalyse mit dem Ziel, vor allem Trends vorherzusagen."},
+  {c:"4 · Technologien", q:"Was meint Quintarelli mit „Info-Plutokratie“?", a:"Eine Organisationsform, in der die (Daten-)Reichen die Herrschaft ausüben — droht auf Basis der aktuellen Datenökonomie und strukturiert einen „Klassenkampf der Zukunft“."},
+  {c:"4 · Technologien", q:"Die drei geopolitischen Sichtweisen: „Wem gehören Daten?“", a:"USA: den Unternehmen, die sie sammeln. China: dem Staat (kollektiv, für Politikentscheidungen). Europa: dem Individuum, von dem sie erzeugt werden.", w:true},
+  {c:"4 · Technologien", q:"Was meint Floridis Vergleich „meine Daten sind wie meine Augen, nicht wie meine Schuhe“?", a:"Daten sind ein konstitutiver, untrennbarer Teil der Person (wie „meine Nase“) — kein austauschbares Besitzverhältnis wie bei „meinem Auto“. Grundlage der europäischen Datensicht.", w:true},
+  {c:"4 · Technologien", q:"Was ist KI (Definition Skript)?", a:"Teilgebiet der Informatik, das die Automatisierung intelligenten Verhaltens behandelt. Intelligenz = Fähigkeit, auswählen zu können. KI = automatisierte Wesensart von Intelligenz, ohne menschliches Bewusstsein."},
+  {c:"4 · Technologien", q:"Was ist Maschinelles Lernen (ML)?", a:"Computerprogramme lernen aus Erfahrungen und verbessern sich. Aus empirischen Erfahrungen werden statistische Muster generiert → plausible Vorhersagen über die Zukunft. Teilmenge der KI.", w:true},
+  {c:"4 · Technologien", q:"Hierarchie KI – ML – Deep Learning?", a:"KI ist der Oberbegriff. ML ist eine Teilmenge der KI. Deep Learning ist eine Teilmenge von ML — nutzt riesige neuronale Netze, inspiriert vom Gehirn, für komplexe Muster in großen Datenmengen.", w:true},
+  {c:"4 · Technologien", q:"Specialized AI vs. General AI?", a:"Specialized AI: konkrete Forschung für einen einzelnen Anwendungsbereich. General AI: der große Wurf, den menschlichen Verstand vollständig zu kopieren (bisher zentrale Schwierigkeit/Unmöglichkeit)."},
+  {c:"4 · Technologien", q:"Wie viel Prozent eines ML-Projekts entfallen auf Datenarbeit?", a:"Ca. 80 % — Daten sammeln, aufbereiten und säubern. Bleibt oft menschliche Arbeit, ebenso die Interpretation der Erkenntnisse.", w:true},
+  {c:"4 · Technologien", q:"Warum gilt die japanische Versicherung Fukoku als wegweisend?", a:"Sie hat eine ganze Abteilung von Sachbearbeitern durch ein einziges KI-Programm von IBM ersetzt. Automatisierung erreicht damit die Management-/Verwaltungsebene.", w:true},
+  {c:"4 · Technologien", q:"Was ist die Kernlektion des Abraham-Wald-Beispiels (Einschusslöcher)?", a:"Survivorship Bias: Man muss die fehlenden Fälle mitdenken. Die zurückgekehrten Flugzeuge zeigen, wo Treffer überlebbar sind → verstärken muss man die Triebwerke (die abgestürzten Maschinen fehlen in den Daten). Datenanalyse braucht menschliche Interpretation.", w:true},
+  {c:"4 · Technologien", q:"Wofür steht AlphaGo / DeepMind?", a:"DeepMind brachte AlphaGo das Go-Spiel bei; es lernte per Monte-Carlo-Algorithmen gegen sich selbst und schlug den weltbesten Spieler Lee Sedol. Beispiel für selbstständiges (bestärkendes) Lernen."},
+  {c:"4 · Technologien", q:"Was zeigt der „KI-Zirkel“?", a:"Ein sich selbst verstärkender Kreislauf: mehr/günstigere Datenspeicherung → bessere/günstigere Datenverarbeitung → höhere Löhne für KI-Kenntnisse → mehr Menschen erwerben KI-Kompetenzen → KI-Fortschritt beschleunigt sich."},
+  {c:"4 · Technologien", q:"Was verspricht 6G-Mobilfunk?", a:"Übertragungsraten im Terabit/s-Bereich, nahezu verzögerungsfreie Echtzeit-Kommunikation, höhere Frequenzbänder, enge KI-Verknüpfung. Anwendungen: Fernmedizin, Smart Cities, autonome Fahrzeuge, Robotik-Fernsteuerung."},
+  {c:"4 · Technologien", q:"Wozu 3D-gedruckte Lebensmittel (TRL 7)?", a:"Schichtweise Erzeugung aus verschiedenen Zutaten. Personalisierte Nährstoffprofile (v. a. medizinisch), weniger Lebensmittelabfall, nachhaltige Proteinquellen (Algen, Insekten). Synergie mit KI & IoT."},
+  {c:"4 · Technologien", q:"Was leisten Deep-Fake-Scanner (TRL 7)?", a:"Identifizieren gefälschte Videos/Bilder/Audio (per Anomalien wie inkonsistente Beleuchtung). Wichtig für Journalismus, Politik. Herausforderung: ständiges Wettrüsten mit den Fälschern. Bsp.: Fake-Klitschko telefonierte mit Bürgermeister Ludwig."},
+  {c:"4 · Technologien", q:"Was steht im Mittelpunkt der 5. Entwicklungsphase der digitalen Transformation?", a:"Independent-AI- und Robotikdiffusion. (Aktuelle 4. Phase: IoT, Big Data, Cloud Diffusion.)"},
+
+  {c:"5 · Innovation", q:"Wortherkunft und Grundbedeutung von „Innovation“?", a:"Von lat. innovare = erneuern. Grundsätzlich: etwas Bestehendes wird erneuert. Nicht Statik, sondern Wandel des Seienden wird zum Prinzip."},
+  {c:"5 · Innovation", q:"Was ist die „Gnadenlosigkeit“ des Innovations-Wirkprinzips?", a:"Innovation führt NICHT zur Koexistenz von Neuem und Altem, sondern zum ERSATZ des Alten durch das Neue. Bisher Gültiges wird obsolet und wertlos.", w:true},
+  {c:"5 · Innovation", q:"Betriebswirtschaftliche Definition von Innovation?", a:"Durch moderne Entwicklung werden neue Produkte, Verfahren oder Dienstleistungen auf den Markt gebracht, die bisher genutzte verdrängen."},
+  {c:"5 · Innovation", q:"Was ist Innovationsmanagement?", a:"Der systematische Ansatz, Innovationen in Organisationen entstehen zu lassen, sie zu sammeln und zu kontrollieren. Basiert auf struktureller und prozessualer Ebene."},
+  {c:"5 · Innovation", q:"Die drei Aspekte, an denen Innovationsfähigkeit bewertet wird?", a:"Innovationsstrategie (welchem Zweck dient Innovation?), Innovationskultur (Aufgeschlossenheit, Umgang mit Scheitern), Innovationskompetenz (Know-how, Kompetenzen, Positionen)."},
+  {c:"5 · Innovation", q:"Nenne typische Innovationsrisiken.", a:"Technologisches Risiko (Reifegrad fehlt), zu hoher Vorlauf-/Investitionsaufwand, verfrühter Projektabbruch, kein passendes Geschäftsmodell/Absatzmarkt, und: dass Ideen gar nicht aufgegriffen werden."},
+  {c:"5 · Innovation", q:"Was ist laut Skript das größte aller Innovationsrisiken?", a:"Die starre Überzeugung, dass die digitale Transformation nur begrenzte Umbrüche bringt und alles Wesentliche so bleiben kann wie bisher — eine Unterlassung aus Selbstgefälligkeit.", w:true},
+  {c:"5 · Innovation", q:"Was ist ein CINO (Chief Innovation Officer)?", a:"Position, die Innovation und Change-Management organisiert. Kommunikative Schnittstellenfunktion zwischen Unternehmensführung und Technikabteilung. NICHT für Programmierung/Konzeption der Technik zuständig.", w:true},
+  {c:"5 · Innovation", q:"Was ist ein CDO (Chief Digital Officer)?", a:"Verantwortlich für Planung/Durchführung der Transformation in das digitale Zeitalter. Entwickelt neue Geschäftsmodelle und erarbeitet die Digitalstrategie. 2016: nur 2 % der Großunternehmen; 2023: bereits 52 %.", w:true},
+  {c:"5 · Innovation", q:"Unterschied CIO vs. CDO?", a:"CIO: verantwortlich für Umsetzung/Umsetzbarkeit der strategischen Entscheidung in Hinblick auf die Technologie. CDO: verantwortlich für die strategischen Entscheidungen selbst, die zur Anwendung innovativer Technologien führen.", w:true},
+  {c:"5 · Innovation", q:"Warum haben sich CINOs oft wirksamer erwiesen als CDOs?", a:"Weil sie die Innovation selbst verantworten, die den Wandel einleiten soll. CDO-Stellen wurden oft ohne ausreichende Entscheidungskompetenz/Durchgriffsrechte etabliert → Ernüchterung."},
+  {c:"5 · Innovation", q:"Nenne die klassischen C-Level-Rollen (CFO, COO, CMO, CTO).", a:"CFO: Finanzportfolio. COO: setzt Strategien in operative Prozesse um. CMO: koordiniert Marketing. CTO: verantwortet technische Entwicklung."},
+  {c:"5 · Innovation", q:"Was ist die Fail-Fast-Kultur?", a:"Operatives Prinzip: offene Diskussion + wiederholte Rückmeldung in kurzen Zyklen. Fehler/Fehlentwicklungen früh erkennen — je jünger der Fehler, desto geringer Aufwand/Verlust. Scheitern als notwendiger Zwischenschritt zum Erfolg.", w:true},
+  {c:"5 · Innovation", q:"Woher stammt die Fail-Fast-Methode ursprünglich?", a:"Aus der Software- und Hardware-Entwicklung / dem System Design. Kurze Interaktionszyklen verbesserten die Produktqualität; von der Informatik in andere Geschäftsbereiche universalisiert."},
+  {c:"5 · Innovation", q:"Wann sollten strategische Veränderungen idealerweise angestoßen werden?", a:"In ertragreichen Geschäftsperioden — dann ist Gestaltungsspielraum vorhanden. Paradox: Gerade dann greift die Dringlichkeit kaum. Größtes Risiko ist unterlassene Erneuerung aus Selbstgefälligkeit."},
+  {c:"5 · Innovation", q:"Zentraler Leitgedanke: Rolle von Technologie im Management?", a:"Technologie ist MITTEL ZUM ZWECK — integraler Bestandteil der Strategie, aber KEIN Ersatz für eine ausgereifte Unternehmensstrategie. Erst Vision/Ziel, dann Technologiewahl (z. B. „Null Emissionen, Null Staus, Null Verkehrstote“).", w:true},
+
+  {c:"6 · Case Studies", q:"Welches Risiko birgt das vollautomatisierte Online-Modehaus?", a:"Hohe Retourenquote: in DE ca. 70 % aller bestellten Online-Mode-Waren gehen zurück, je Rücksendung ~15 € Kosten. KI soll Empfehlungen verbessern und Marketing/Admin automatisieren."},
+  {c:"6 · Case Studies", q:"Was macht Stitch Fix anders als das vollautomatisierte Modehaus?", a:"Symbiose aus datenanalytischer KI-Empfehlung UND menschlichen Stylisten. Pflicht-Fragebogen → Stilprofil; regelmäßige kuratierte Pakete; Feedback bei Rücksendung. Mensch-Maschine-Zusammenspiel als Geschäftsgrundlage — kein Rabatt/Abverkauf.", w:true},
+  {c:"6 · Case Studies", q:"Wer steckt hinter Stitch Fix?", a:"Gegründet von Katrina Lake. Analysemethoden von Eric Colson (kam von Netflix, wo er den Empfehlungs-Algorithmus verfeinerte). Bezieht z. B. Pinterest-Vorlieben ein."},
+  {c:"6 · Case Studies", q:"Was ist Gabardine — und wieso der Name „Trenchcoat“?", a:"Von Thomas Burberry entwickelter, imprägnierter Stoff (Patent 1888): wärmend, atmungsaktiv, wasserabweisend, leicht. Genutzt für Mäntel englischer Soldaten im 1. WK. „Trench“ = Schützengraben."},
+  {c:"6 · Case Studies", q:"Burberrys Problem vor 2006?", a:"Zu viele Lizenzen (23), Burberry-Karo sogar auf Hundehalsbändern, unterschiedliche Sortimente je Region → Beliebigkeit, schwache Kundenbindung, konstanter Verlust von Marktanteilen (Indifferenz gegenüber der Markenidentität)."},
+  {c:"6 · Case Studies", q:"Was tat Angela Ahrendts bei Burberry (CEO 2006–2014)?", a:"Radikales Change-Management, „zurück zu den Wurzeln“ (Trenchcoat, Outdoor). Orientierung an Apple/Starbucks (einheitliches globales Portfolio). Storekonzept nach Vorlage der Homepage. Umsatz und operativer Gewinn verdoppelt. Wechselte danach zu Apple."},
+  {c:"6 · Case Studies", q:"Was ist die Kernidee von Burberrys Digital-Strategie?", a:"Reale und virtuelle Erlebnisse müssen exakt korrespondieren. Nicht das Virtuelle knüpft ans Reale an — sondern der reale Store folgt dem Online-Auftritt (in die Webseite eintauchen). Konservativer Ansatz, progressiv umgesetzt."},
+  {c:"6 · Case Studies", q:"Was ist e-Estonia und das Programm X-Road?", a:"Projekt zur Überführung Estlands in eine digitale Gesellschaft. X-Road verbindet dezentrale Datenbanken über End-to-End-verschlüsselte Pfade. Daten nicht zentral gespeichert → weniger Missbrauch/Ausfallrisiko."},
+  {c:"6 · Case Studies", q:"Welches Prinzip steht bei e-Estonia im Zentrum (Datenschutz)?", a:"Datensouveränität: Nur die Einzelperson entscheidet, wer welche sensiblen Daten sieht; sie wird benachrichtigt, wenn Behörden zugreifen. ~85 % der Daten öffentlich, ~15 % sensibel. Dokumentarische Transparenz bei Gesetzen."},
+  {c:"6 · Case Studies", q:"Was zeigt: Bei e-Estonia kommt zuerst die Strategie, dann die Technologie?", a:"Der hauptverantwortliche Digitalberater der Regierung ist KEIN Informatiker, sondern ein politischer Aktivist (ursprünglich für Radverkehr). Zuerst holistische Strategie/republikanisches Verständnis, dann Technologie.", w:true},
+  {c:"6 · Case Studies", q:"Was ist e-Residency in Estland?", a:"Weltbürger können einen digitalen Wohnsitz wählen, ohne im Land zu leben — nutzen Online-Dienste, können Unternehmen nach estn. Recht gründen (Antrag ~100 €). Estland erhält jährlich mehr virtuelle Staatsbürgerschaftsanträge als Kinder geboren werden."},
+  {c:"6 · Case Studies", q:"Wie verlief Aufstieg und Fall von Nokia?", a:"1990 strategische Fokussierung auf Mobilfunk (alle anderen Sparten verkauft). 1998–2011 Weltmarktführer; 2007 >50 % aller Branchenprofite. 2007 iPhone → Nachfrage nach Smartphones unterschätzt. 2013 Verkauf an Microsoft (5,4 Mrd. €)."},
+  {c:"6 · Case Studies", q:"Was war Nokias STRATEGISCHER (nicht technischer) Fehler?", a:"Nokia hatte schon 1996 ein Smartphone + Touchscreen, übersetzte den Vorsprung aber NICHT in massentaugliche Produkte, konzipierte keine benutzerfreundliche Software und schuf keinen eigenen App-Marktplatz (wie Apples App-Store).", w:true},
+  {c:"6 · Case Studies", q:"Was war die McKinsey/AT&T-Fehlprognose?", a:"McKinsey prognostizierte für 2000 ca. 900.000 Mobiltelefon-Nutzer — tatsächlich waren es 738 Millionen. AT&T vernachlässigte daraufhin das Marktsegment Mobiltelefonie."},
+  {c:"6 · Case Studies", q:"Was war die „Nokia-Krise“ und welche Lehre zieht das Skript daraus?", a:"Nokias Redimensionierung bremste Finnlands Wirtschaftswachstum ein Jahrzehnt lang (Minister Stubb: das iPhone und das iPad). Lehre: Technologie gestaltet die Gesellschaft — das Gemeinwesen muss fragen, zu welchen Zwecken."},
+];
+
+/* ===================== MC (MULTIPLE-SELECT) DATA ===================== */
+/* Format: {c, q, o:[[text, isCorrect], ...]} */
+const MC = [
+  {c:"2 · Arbeitsmarkt", q:"Welche Produktionsfaktoren kennt die klassische Volkswirtschaftslehre (Adam Smith)?", o:[["Boden",true],["Kapital",true],["Arbeit",true],["Wissen",false]]},
+  {c:"2 · Arbeitsmarkt", q:"Welche Neuerungen können laut Schumpeter radikale Transformationen im Markt verantworten?", o:[["Neue Produktionsmethoden",true],["Neue Konsumgüter",true],["Neue Formen der industriellen Organisation",true],["Neue Sportmethoden",false]]},
+  {c:"2 · Arbeitsmarkt", q:"Welche Institutionen haben bekannte Studien zur Zukunft der Arbeit veröffentlicht?", o:[["McKinsey Global Institute",true],["OECD",true],["Oxford Martin School",true],["Institute for Advanced Study Princeton",false]]},
+  {c:"2 · Arbeitsmarkt", q:"Welche rechtlichen Errungenschaften ließen die Profite industrieller Produktion mehr Bürger:innen zugutekommen?", o:[["Progressives Steuersystem",true],["Allgemeine Krankenversicherung",true],["Die Mehrwertsteuer",false],["Grundsatz der Gleichheit vor Gericht",false]]},
+  {c:"2 · Arbeitsmarkt", q:"Warum sinkt der menschliche Anteil an der Wertschöpfung weiter?", o:[["Immer mehr Tätigkeiten werden automatisiert",true],["Grenzkosten für technologische Lösungen sinken",true],["Effizienzgewinne durch Technologie steigen rasant",true],["Wegen erwarteter längerer Streiks und Arbeitsniederlegungen",false]]},
+  {c:"2 · Arbeitsmarkt", q:"Über welche Werte verfügt ein Produkt in der Marktwirtschaft?", o:[["Gebrauchswert",true],["Tauschwert",true],["Sinnstiftung",false],["Luxusaspekt",false]]},
+  {c:"2 · Arbeitsmarkt", q:"Der Markt schafft Neues — und gleichzeitig wird Bewährtes …", o:[["obsolet",true],["oft wertlos",true],["behutsam abgewickelt",false],["integriert",false]]},
+  {c:"2 · Arbeitsmarkt", q:"Welche Merkmale kennzeichnen die Gig Economy / Platform Worker?", o:[["Kurzfristige, plattformvermittelte Arbeitsverhältnisse",true],["Algorithmisches Management",true],["Konkurrenz zwischen isolierten Freiberuflern",true],["Langfristige Festanstellung mit Kündigungsschutz",false]]},
+  {c:"2 · Arbeitsmarkt", q:"Welche Aussagen zur TFP (Solow) treffen zu?", o:[["Steht für technologischen Fortschritt als Produktivitätstreiber",true],["Output kann steigen, obwohl Input sinkt",true],["Nach Abramovitz eine Kennzahl des Unwissens",true],["Misst die Anzahl der eingesetzten Maschinen",false]]},
+  {c:"2 · Arbeitsmarkt", q:"Welche sind Rifkins drei Vorbedingungen einer neuen industriellen Revolution?", o:[["Neue Kommunikationstechnologien",true],["Neue Energiesysteme",true],["Eine neue Infrastruktur",true],["Ein neues Steuersystem",false]]},
+
+  {c:"1 · Grundlagen", q:"Worauf basiert die vierte industrielle Revolution / Wissensgesellschaft?", o:[["Internet der Dinge (IoT)",true],["Big Data",true],["Blockchain",true],["Künstliche Intelligenz",true],["Rückkehr zu manueller Fabrikarbeit",false]]},
+  {c:"1 · Grundlagen", q:"Wofür stehen die Komponenten von BANI?", o:[["Brittle (brüchig)",true],["Anxious (ängstlich)",true],["Nonlinear (nichtlinear)",true],["Incomprehensible (unverständlich)",true],["Ambiguous (mehrdeutig)",false]]},
+
+  {c:"3 · Beschleuniger", q:"Welche Aussagen zum First Mover Advantage treffen laut Skript zu?", o:[["Der echte First Mover scheitert oft",true],["Der Zweite lernt aus den Fehlern des Ersten",true],["Google/Facebook waren First Mover bei tragfähigen Geschäftsmodellen",true],["Der First Mover gewinnt immer dauerhaft",false]]},
+  {c:"3 · Beschleuniger", q:"Welche Merkmale gehören zum Web 2.0?", o:[["User-Generated-Content",true],["Verständnis als soziales Web",true],["Architektur der Beteiligung / kollektive Intelligenz",true],["Semantisches Netz auf Blockchain-Basis",false]]},
+
+  {c:"4 · Technologien", q:"Was sind die Kernmerkmale des IoT?", o:[["Vernetzung",true],["Automatisierung",true],["Intelligenz",true],["Interaktivität",true],["Anonymisierung",false]]},
+  {c:"4 · Technologien", q:"Welche Technologien braucht das IoT, um Nutzen zu stiften?", o:[["Big Data",true],["Cloud Computing",true],["Künstliche Intelligenz",true],["Blockchain",false],["6G-Mobilfunk",false]]},
+  {c:"4 · Technologien", q:"Welche Aussagen zu KI / ML / Deep Learning treffen zu?", o:[["ML ist eine Teilmenge der KI",true],["Deep Learning nutzt riesige neuronale Netze",true],["Ca. 80 % der ML-Arbeit ist Datenaufbereitung",true],["Deep Learning ist der Oberbegriff über der KI",false]]},
+  {c:"4 · Technologien", q:"Welche Aussagen zur Frage „Wem gehören Daten?“ treffen zu?", o:[["USA: den Unternehmen, die sie sammeln",true],["China: dem Staat",true],["Europa: dem Individuum",true],["Laut Floridi: Daten sind wie Schuhe frei verkäuflich",false]]},
+
+  {c:"5 · Innovation", q:"Welche Merkmale kennzeichnen die Fail-Fast-Kultur?", o:[["Offene Diskussion und Rückmeldung in kurzen Zyklen",true],["Scheitern als notwendiger Zwischenschritt",true],["Kritik als Mittel des Fortschritts",true],["Frühe Fehlererkennung spart Kosten",true],["Projekte dürfen niemals abgebrochen werden",false]]},
+  {c:"5 · Innovation", q:"An welchen drei Aspekten wird die Innovationsfähigkeit bewertet?", o:[["Innovationsstrategie",true],["Innovationskultur",true],["Innovationskompetenz",true],["Innovationsgeschwindigkeit",false]]},
+  {c:"5 · Innovation", q:"Welche zählen zu den typischen Innovationsrisiken?", o:[["Technologisches Risiko (fehlender Reifegrad)",true],["Zu hoher Vorlauf-/Investitionsaufwand",true],["Verfrühter Projektabbruch",true],["Kein passendes Geschäftsmodell/Absatzmarkt",true],["Zu schnelle Markteinführung durch Wettbewerber",false]]},
+  {c:"5 · Innovation", q:"Welche Aussagen zur Rolle von Technologie im Management treffen zu?", o:[["Technologie ist Mittel zum Zweck",true],["Zuerst Vision/Ziel, dann Technologiewahl",true],["Technologie ist integraler Teil der Strategie",true],["Technologie ersetzt eine ausgereifte Strategie",false]]},
+
+  {c:"6 · Case Studies", q:"Welche Maßnahmen ergriff Burberry unter Angela Ahrendts?", o:[["Konzentration auf das Kerngeschäft Trenchcoat",true],["Zentralisierung der Produktion in England",true],["Kündigung von Lizenzverträgen",true],["Fokus auf die unter-30-Jährigen",true],["Vergabe zusätzlicher Marken-Lizenzen",false]]},
+  {c:"6 · Case Studies", q:"Welche Prinzipien kennzeichnen e-Estonia?", o:[["Datensouveränität der Einzelperson",true],["Dezentrale Datenspeicherung (X-Road)",true],["Dokumentarische Transparenz bei Gesetzen",true],["Daten nur einmal eingeben, mehrfach nutzen",true],["Zentrale Speicherung aller Daten auf einem Server",false]]},
+  {c:"6 · Case Studies", q:"Welche STRATEGISCHEN Fehler führten zu Nokias Niedergang?", o:[["Vorsprung nicht in massentaugliche Produkte übersetzt",true],["Keine benutzerfreundliche Betriebssoftware konzipiert",true],["Kein eigener App-Marktplatz geschaffen",true],["Sie konnten technisch keinen Touchscreen bauen",false]]},
+];
+
+/* ===================== SHARED / PERSISTENCE ===================== */
+CARDS.forEach((c,i)=>c.id=i);
+MC.forEach((m,i)=>m.id=i);
+const STORAGE_KEY='db_lerntool_v2';
+let known=new Set(), review=new Set();
+let mcStats={done:0, sum:0, under:0};
+
+const SYNC_URL='/sync';             // Cloudflare Pages Function (functions/sync.js)
+const TOKEN_KEY='db_sync_token';
+let syncToken=null, lastUpdated=0, pushTimer=null;
+
+function currentState(){
+  return {known:[...known], review:[...review], mc:mcStats, updatedAt:lastUpdated};
+}
+function applyState(obj){
+  if(!obj||typeof obj!=='object') return;
+  known=new Set(obj.known||[]); review=new Set(obj.review||[]);
+  if(obj.mc) mcStats=obj.mc;
+  lastUpdated=obj.updatedAt||0;
+}
+function readLocal(){
+  try{ const v=localStorage.getItem(STORAGE_KEY); return v?JSON.parse(v):null; }catch(e){ return null; }
+}
+function writeLocal(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(currentState())); }catch(e){}
+}
+function setSyncStatus(cls,text){
+  const d=document.getElementById('syncDot'), t=document.getElementById('syncText');
+  if(d) d.className='sync-dot'+(cls?' '+cls:'');
+  if(t) t.textContent=text;
+}
+
+async function serverGet(){
+  const r=await fetch(SYNC_URL,{headers:{'X-Sync-Token':syncToken},cache:'no-store'});
+  if(r.status===403) throw new Error('Token abgelehnt (403)');
+  if(!r.ok) throw new Error('Server-Fehler '+r.status);
+  const j=await r.json();
+  return j.data;
+}
+async function serverPut(){
+  const r=await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json','X-Sync-Token':syncToken},body:JSON.stringify(currentState())});
+  if(r.status===403) throw new Error('Token abgelehnt (403)');
+  if(!r.ok) throw new Error('Server-Fehler '+r.status);
+  return r.json();
+}
+function schedulePush(){
+  if(!syncToken) return;
+  clearTimeout(pushTimer);
+  setSyncStatus('busy','Lernstand: wird gespeichert …');
+  pushTimer=setTimeout(async()=>{
+    try{ await serverPut(); setSyncStatus('ok','Lernstand: am Server gespeichert'); }
+    catch(e){ setSyncStatus('err','Lernstand: Server nicht erreichbar (lokal gesichert)'); }
+  },1200);
+}
+
+async function loadState(){
+  const local=readLocal();
+  if(local) applyState(local);
+  try{ syncToken=localStorage.getItem(TOKEN_KEY)||null; }catch(e){}
+  if(!syncToken){ setSyncStatus('','Lernstand: nur auf diesem Gerät'); return; }
+  try{
+    const remote=await serverGet();
+    if(remote && (remote.updatedAt||0) > (local?local.updatedAt||0:0)){
+      applyState(remote); writeLocal();
+      setSyncStatus('ok','Lernstand: vom Server geladen');
+    } else if(local && (!remote || (local.updatedAt||0) > (remote.updatedAt||0))){
+      await serverPut();
+      setSyncStatus('ok','Lernstand: am Server gespeichert');
+    } else {
+      setSyncStatus('ok','Lernstand: synchron');
+    }
+  }catch(e){
+    setSyncStatus('err','Lernstand: Server nicht erreichbar (lokal)');
+  }
+}
+
+async function saveState(){
+  lastUpdated=Date.now();
+  writeLocal();
+  schedulePush();
+}
+
+/* ===================== FLASHCARDS ===================== */
+let fChapters=new Set(), onlyReview=false, onlyWortlich=false;
+let deck=[], idx=0, flipped=false, shuffleOrder=null;
+const fChapterList=[...new Set(CARDS.map(c=>c.c))];
+
+function buildDeck(){
+  deck=CARDS.filter(c=>{
+    if(fChapters.size&&!fChapters.has(c.c)) return false;
+    if(onlyWortlich&&!c.w) return false;
+    if(onlyReview&&known.has(c.id)) return false;
+    return true;
+  });
+  if(shuffleOrder){
+    const pos=new Map(shuffleOrder.map((id,i)=>[id,i]));
+    deck.sort((a,b)=>(pos.has(a.id)?pos.get(a.id):1e9)-(pos.has(b.id)?pos.get(b.id):1e9));
+  }
+  if(idx>=deck.length) idx=deck.length?deck.length-1:0;
+  if(idx<0) idx=0;
+}
+function renderChapters(){
+  const el=document.getElementById('chapters'); el.innerHTML='';
+  const all=document.createElement('div');
+  all.className='chip'+(fChapters.size===0?' active':''); all.textContent='Alle';
+  all.onclick=()=>{fChapters.clear();shuffleOrder=null;idx=0;renderFlash();}; el.appendChild(all);
+  fChapterList.forEach(ch=>{
+    const c=document.createElement('div');
+    c.className='chip'+(fChapters.has(ch)?' active':''); c.textContent=ch;
+    c.onclick=()=>{ fChapters.has(ch)?fChapters.delete(ch):fChapters.add(ch); shuffleOrder=null; idx=0; renderFlash(); };
+    el.appendChild(c);
+  });
+}
+function renderFlash(){
+  buildDeck(); renderChapters();
+  const card=document.getElementById('card');
+  const scope=CARDS.filter(c=>!fChapters.size||fChapters.has(c.c));
+  const kn=scope.filter(c=>known.has(c.id)).length;
+  const pct=scope.length?Math.round(kn/scope.length*100):0;
+  document.getElementById('progFill').style.width=pct+'%';
+  document.getElementById('progLabel').textContent=`${kn} von ${scope.length} sitzt (${pct}%)`;
+  const rev=scope.filter(c=>review.has(c.id)&&!known.has(c.id)).length;
+  document.getElementById('reviewLabel').textContent=rev?`${rev} × „nochmal"`:'';
+
+  const oldEmpty=document.getElementById('emptyMsg'); if(oldEmpty) oldEmpty.remove();
+  if(deck.length===0){
+    card.style.display='none';
+    const e=document.createElement('div'); e.id='emptyMsg'; e.className='empty';
+    e.innerHTML='<strong>Nichts mehr offen 🎉</strong>Alle Karten dieser Auswahl sitzen. Kapitel wechseln oder zurücksetzen.';
+    document.querySelector('.card-area').appendChild(e); return;
+  }
+  card.style.display='';
+  const c=deck[idx];
+  document.getElementById('frontChap').textContent=c.c;
+  document.getElementById('backChap').innerHTML=c.c+(c.w?'<span class="wortlich-badge">wörtlich</span>':'');
+  document.getElementById('qText').innerHTML=c.q+(c.w?'<span class="wortlich-badge">wörtlich</span>':'');
+  document.getElementById('aText').innerHTML=c.a;
+  card.className='card'+(flipped?' flipped':'');
+  document.getElementById('counter').textContent=`${idx+1} / ${deck.length}`;
+  const dot=document.getElementById('statusDot');
+  dot.className='status-dot '+(known.has(c.id)?'dot-known':review.has(c.id)?'dot-review':'dot-new');
+  document.getElementById('prevBtn').disabled=idx===0;
+  document.getElementById('nextBtn').disabled=idx===deck.length-1;
+  document.getElementById('reviewBtn').className='btn'+(onlyReview?' on':'');
+  document.getElementById('wortlichBtn').className='btn'+(onlyWortlich?' on':'');
+}
+function fNext(){ if(idx<deck.length-1){idx++;flipped=false;renderFlash();} }
+function fPrev(){ if(idx>0){idx--;flipped=false;renderFlash();} }
+function fFlip(){ flipped=!flipped; renderFlash(); }
+function markKnown(){ if(!deck.length)return; const c=deck[idx]; known.add(c.id);review.delete(c.id);saveState(); if(idx<deck.length-1){idx++;flipped=false;} renderFlash(); }
+function markReview(){ if(!deck.length)return; const c=deck[idx]; review.add(c.id);known.delete(c.id);saveState(); if(idx<deck.length-1){idx++;flipped=false;} renderFlash(); }
+function fShuffle(){
+  buildDeck();                          // aktuelle gefilterte Auswahl holen
+  const ids=deck.map(c=>c.id);
+  for(let i=ids.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ids[i],ids[j]]=[ids[j],ids[i]];}
+  shuffleOrder=ids;                     // Reihenfolge merken -> bleibt bei Navigation stabil
+  idx=0; flipped=false;
+  renderFlash();
+}
+
+/* ===================== MC TRAINER ===================== */
+let mcChapters=new Set(), mcDeck=[], mcIdx=0, mcSelected=new Set(), mcChecked=false;
+const mcChapterList=[...new Set(MC.map(m=>m.c))];
+
+function buildMcDeck(){
+  mcDeck=MC.filter(m=>!mcChapters.size||mcChapters.has(m.c));
+  for(let i=mcDeck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[mcDeck[i],mcDeck[j]]=[mcDeck[j],mcDeck[i]];}
+  // shuffle options within each question copy
+  mcDeck=mcDeck.map(m=>{
+    const opts=m.o.map((o,i)=>({t:o[0],correct:o[1]}));
+    for(let i=opts.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[opts[i],opts[j]]=[opts[j],opts[i]];}
+    return {c:m.c,q:m.q,opts};
+  });
+  mcIdx=0;
+}
+function renderMcChapters(){
+  const el=document.getElementById('mcChapters'); el.innerHTML='';
+  const all=document.createElement('div');
+  all.className='chip'+(mcChapters.size===0?' active':''); all.textContent='Alle';
+  all.onclick=()=>{mcChapters.clear();buildMcDeck();mcSelected.clear();mcChecked=false;renderMc();}; el.appendChild(all);
+  mcChapterList.forEach(ch=>{
+    const c=document.createElement('div');
+    c.className='chip'+(mcChapters.has(ch)?' active':''); c.textContent=ch;
+    c.onclick=()=>{ mcChapters.has(ch)?mcChapters.delete(ch):mcChapters.add(ch); buildMcDeck();mcSelected.clear();mcChecked=false;renderMc(); };
+    el.appendChild(c);
+  });
+}
+function renderMcStats(){
+  document.getElementById('mcDone').textContent=mcStats.done;
+  document.getElementById('mcAvg').textContent=mcStats.done?Math.round(mcStats.sum/mcStats.done*100)+'%':'–';
+  document.getElementById('mcUnder').textContent=mcStats.under;
+}
+function renderMc(){
+  renderMcChapters(); renderMcStats();
+  if(!mcDeck.length) buildMcDeck();
+  const m=mcDeck[mcIdx];
+  document.getElementById('mcChap').textContent=m.c;
+  document.getElementById('mcQ').textContent=m.q;
+  const box=document.getElementById('mcOpts'); box.innerHTML='';
+  m.opts.forEach((o,i)=>{
+    const div=document.createElement('div'); div.className='opt';
+    const sel=mcSelected.has(i);
+    if(!mcChecked && sel) div.classList.add('sel');
+    if(mcChecked){
+      if(o.correct && sel) div.classList.add('correct');
+      else if(o.correct && !sel) div.classList.add('missed');
+      else if(!o.correct && sel) div.classList.add('wrong');
+    }
+    let mark = sel?'✓':'';
+    let tag='';
+    if(mcChecked){
+      if(o.correct && !sel){ tag='<span class="tag-mini" style="color:var(--green)">richtig — verpasst</span>'; }
+      else if(!o.correct && sel){ tag='<span class="tag-mini" style="color:var(--red)">falsch</span>'; }
+      else if(o.correct && sel){ mark='✓'; }
+    }
+    div.innerHTML=`<div class="box">${mark}</div><div>${o.t}${tag}</div>`;
+    if(!mcChecked){
+      div.onclick=()=>{ mcSelected.has(i)?mcSelected.delete(i):mcSelected.add(i);
+        document.getElementById('mcCheck').disabled=mcSelected.size===0; renderMc(); };
+    }
+    box.appendChild(div);
+  });
+  document.getElementById('mcCheck').classList.toggle('hidden',mcChecked);
+  document.getElementById('mcCheck').disabled=mcSelected.size===0;
+  document.getElementById('mcNext').classList.toggle('hidden',!mcChecked);
+  document.getElementById('mcCounter').textContent=`${mcIdx+1} / ${mcDeck.length}`;
+  const fb=document.getElementById('mcFb'); fb.className='mc-feedback'+(mcChecked?' show':'');
+}
+function mcCheck(){
+  const m=mcDeck[mcIdx];
+  const correctIdx=new Set(m.opts.map((o,i)=>o.correct?i:-1).filter(i=>i>=0));
+  const nCorrect=correctIdx.size;
+  const hit=[...mcSelected].filter(i=>correctIdx.has(i)).length;
+  const wrong=[...mcSelected].filter(i=>!correctIdx.has(i)).length;
+  const missed=nCorrect-hit;
+  const score=Math.max(0,(hit-wrong)/nCorrect);
+  mcStats.done++; mcStats.sum+=score;
+  const underSelected = missed>0 && wrong===0;
+  if(underSelected) mcStats.under++;
+  saveState();
+  mcChecked=true; renderMc();
+  const fb=document.getElementById('mcFb');
+  const pct=Math.round(score*100);
+  if(score===1){
+    fb.className='mc-feedback show fb-good';
+    fb.innerHTML=`<span class="fb-score">Perfekt — ${pct}%.</span> Alle ${nCorrect} richtigen Optionen erkannt, keine falsche dabei.`;
+  } else if(underSelected){
+    fb.className='mc-feedback show fb-under';
+    fb.innerHTML=`<span class="fb-score">${pct}% — zu wenig gewählt.</span> Du hast ${missed} richtige Option(en) übersehen und keine falsche angekreuzt. Das ist genau dein Muster: Bei „Welche …?" gibt es meist mehrere richtige Antworten — prüfe jede Option einzeln auf wahr/falsch, statt bei der ersten sicheren aufzuhören.`;
+  } else {
+    fb.className='mc-feedback show fb-wrong';
+    fb.innerHTML=`<span class="fb-score">${pct}%.</span> ${hit} von ${nCorrect} richtig, ${wrong} falsch angekreuzt${missed>0?`, ${missed} übersehen`:''}. Grün = richtig, gestrichelt = verpasst, rot = falsch gewählt.`;
+  }
+}
+function mcNext(){
+  if(mcIdx<mcDeck.length-1){ mcIdx++; }
+  else { buildMcDeck(); } // reshuffle new round
+  mcSelected.clear(); mcChecked=false; renderMc();
+}
+
+/* ===================== MODE SWITCH ===================== */
+function setMode(m){
+  const f=document.getElementById('flashMode'), c=document.getElementById('mcMode');
+  document.getElementById('modeFlash').classList.toggle('active',m==='flash');
+  document.getElementById('modeMc').classList.toggle('active',m==='mc');
+  f.classList.toggle('hidden',m!=='flash');
+  c.classList.toggle('hidden',m!=='mc');
+  if(m==='mc'){ if(!mcDeck.length) buildMcDeck(); renderMc(); }
+  else renderFlash();
+}
+
+/* ===================== EVENTS ===================== */
+document.getElementById('card').onclick=fFlip;
+document.getElementById('nextBtn').onclick=fNext;
+document.getElementById('prevBtn').onclick=fPrev;
+document.getElementById('knownBtn').onclick=markKnown;
+document.getElementById('reviewCardBtn').onclick=markReview;
+document.getElementById('shuffleBtn').onclick=fShuffle;
+document.getElementById('reviewBtn').onclick=()=>{onlyReview=!onlyReview;shuffleOrder=null;idx=0;renderFlash();};
+document.getElementById('wortlichBtn').onclick=()=>{onlyWortlich=!onlyWortlich;shuffleOrder=null;idx=0;renderFlash();};
+document.getElementById('resetBtn').onclick=()=>{ if(confirm('Karteikarten-Fortschritt (sitzt/nochmal) zurücksetzen?')){known.clear();review.clear();saveState();idx=0;renderFlash();} };
+
+document.getElementById('mcCheck').onclick=mcCheck;
+document.getElementById('mcNext').onclick=mcNext;
+document.getElementById('mcShuffle').onclick=()=>{buildMcDeck();mcSelected.clear();mcChecked=false;renderMc();};
+document.getElementById('mcReset').onclick=()=>{ if(confirm('MC-Statistik löschen?')){mcStats={done:0,sum:0,under:0};saveState();renderMcStats();} };
+
+document.getElementById('modeFlash').onclick=()=>setMode('flash');
+document.getElementById('modeMc').onclick=()=>setMode('mc');
+
+/* ---- Sync-Bedienung ---- */
+function syncMsg(cls,text){ const m=document.getElementById('syncMsg'); m.className='sync-msg'+(cls?' '+cls:''); m.textContent=text; }
+document.getElementById('syncCog').onclick=()=>{
+  const p=document.getElementById('syncPanel'); p.classList.toggle('open');
+  if(p.classList.contains('open')&&syncToken) document.getElementById('syncToken').value=syncToken;
+};
+document.getElementById('syncSave').onclick=async()=>{
+  const v=document.getElementById('syncToken').value.trim();
+  if(!v){ syncMsg('err','Bitte Token eingeben.'); return; }
+  syncToken=v;
+  try{ localStorage.setItem(TOKEN_KEY,v); }catch(e){}
+  syncMsg('','Verbinde …');
+  try{
+    const remote=await serverGet();
+    if(remote && (remote.updatedAt||0) > lastUpdated){
+      applyState(remote); writeLocal(); renderFlash(); renderMcStats();
+      syncMsg('ok','Verbunden. Lernstand vom Server übernommen.');
+    } else {
+      await serverPut();
+      syncMsg('ok','Verbunden. Lernstand am Server gespeichert.');
+    }
+    setSyncStatus('ok','Lernstand: synchron');
+  }catch(e){ setSyncStatus('err','Lernstand: nicht verbunden'); syncMsg('err','Fehler: '+e.message); }
+};
+document.getElementById('syncPull').onclick=async()=>{
+  if(!syncToken){ syncMsg('err','Erst Token eingeben.'); return; }
+  try{ const remote=await serverGet();
+    if(!remote){ syncMsg('err','Am Server ist noch kein Lernstand gespeichert.'); return; }
+    applyState(remote); writeLocal(); renderFlash(); renderMcStats();
+    syncMsg('ok','Lernstand vom Server geladen.'); setSyncStatus('ok','Lernstand: synchron');
+  }catch(e){ syncMsg('err','Fehler: '+e.message); }
+};
+document.getElementById('syncPush').onclick=async()=>{
+  if(!syncToken){ syncMsg('err','Erst Token eingeben.'); return; }
+  try{ lastUpdated=Date.now(); writeLocal(); await serverPut();
+    syncMsg('ok','Lernstand hochgeladen.'); setSyncStatus('ok','Lernstand: am Server gespeichert');
+  }catch(e){ syncMsg('err','Fehler: '+e.message); }
+};
+document.getElementById('syncOff').onclick=()=>{
+  syncToken=null; try{ localStorage.removeItem(TOKEN_KEY); }catch(e){}
+  setSyncStatus('','Lernstand: nur auf diesem Gerät');
+  syncMsg('','Getrennt. Fortschritt bleibt lokal erhalten.');
+};
+
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('flashMode').classList.contains('hidden')){
+    if(e.key===' '){e.preventDefault();fFlip();}
+    else if(e.key==='ArrowRight')fNext();
+    else if(e.key==='ArrowLeft')fPrev();
+    else if(e.key.toLowerCase()==='k')markKnown();
+    else if(e.key.toLowerCase()==='n')markReview();
+  }
+});
+
+/* ===================== INIT ===================== */
+(async function(){ await loadState(); renderFlash(); })();
+</script>
+</body>
+</html>
