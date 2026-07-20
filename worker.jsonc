@@ -1,0 +1,11 @@
+{
+  "name": "mba-trainer",
+  "main": "src/index.js",
+  "compatibility_date": "2025-01-01",
+  "kv_namespaces": [
+    {
+      "binding": "lernstand",
+      "id": "57787ab11cee48aa885eaca000daad98"
+    }
+  ]
+}
