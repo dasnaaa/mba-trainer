@@ -24,18 +24,21 @@
   }
   .app { width:100%; max-width:720px; }
 
-  header { margin-bottom:14px; }
-  h1 { font-family:var(--font-heading); font-size:23px; font-weight:700; letter-spacing:-0.4px; }
-  h1 span { color:var(--accent); }
-  .sub { color:var(--text-dim); font-size:12.5px; margin-top:3px; }
+  header {
+    background:var(--accent); border:2px solid var(--border); border-radius:20px;
+    padding:20px 22px; margin-bottom:16px; box-shadow:5px 5px 0 var(--border);
+  }
+  h1 { font-family:var(--font-heading); font-size:26px; font-weight:800; letter-spacing:-0.4px; color:#fff; }
+  h1 span { color:#ffe38a; }
+  .sub { color:rgba(255,255,255,0.85); font-size:12.5px; margin-top:5px; }
 
   /* segmented mode switch */
   .modeswitch {
     display:flex; background:var(--panel); border:2px solid var(--border);
-    border-radius:10px; padding:4px; margin:14px 0; gap:4px;
+    border-radius:999px; padding:4px; margin:14px 0; gap:4px;
   }
   .modeswitch button {
-    flex:1; padding:10px; border:none; border-radius:7px; background:transparent;
+    flex:1; padding:10px; border:none; border-radius:999px; background:transparent;
     color:var(--text-dim); font-size:13.5px; font-weight:600; cursor:pointer;
     transition:all 0.15s;
   }
@@ -43,7 +46,7 @@
 
   .controls {
     background:var(--panel); border:2px solid var(--border);
-    border-radius:12px; padding:13px; margin-bottom:14px;
+    border-radius:18px; padding:13px; margin-bottom:14px;
   }
   .chapters { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:11px; }
   .chip {
@@ -57,7 +60,7 @@
   .toggles { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
   .btn {
     background:var(--panel2); border:2px solid var(--border); color:var(--text);
-    padding:8px 12px; border-radius:8px; font-size:12.5px; cursor:pointer;
+    padding:8px 14px; border-radius:999px; font-size:12.5px; font-weight:600; cursor:pointer;
     transition:all 0.15s; user-select:none;
   }
   .btn:active { transform:scale(0.97); }
@@ -76,17 +79,20 @@
   .face {
     position:absolute; width:100%; height:100%; min-height:300px;
     backface-visibility:hidden; -webkit-backface-visibility:hidden;
-    border-radius:16px; border:2px solid var(--border); padding:24px;
-    display:flex; flex-direction:column;
+    border-radius:22px; border:2px solid var(--border); padding:24px;
+    display:flex; flex-direction:column; box-shadow:5px 5px 0 var(--border);
   }
   .front { background:var(--panel); }
   .back { background:var(--panel2); transform:rotateY(180deg); }
   .face-label { font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-dim); margin-bottom:4px; }
-  .chap-tag { display:inline-block; font-size:11px; color:var(--accent); margin-bottom:12px; font-weight:700; }
+  .chap-tag {
+    display:inline-block; font-size:11px; background:var(--accent); color:#fff;
+    margin-bottom:12px; font-weight:700; padding:4px 11px; border-radius:999px;
+  }
   .wortlich-badge {
     display:inline-block; font-size:10px; text-transform:uppercase; letter-spacing:0.8px;
-    color:var(--wortlich); border:1px solid var(--wortlich); border-radius:4px;
-    padding:2px 6px; margin-left:8px; vertical-align:middle;
+    background:var(--wortlich); color:#fff; border:2px solid var(--border); border-radius:999px;
+    padding:3px 9px; margin-left:8px; vertical-align:middle; font-weight:700;
   }
   .q-text { font-family:var(--font-heading); font-size:21px; font-weight:700; letter-spacing:-0.2px; line-height:1.35; flex:1; display:flex; align-items:center; }
   .a-text { font-size:15.5px; line-height:1.55; flex:1; display:flex; align-items:center; color:var(--text); }
@@ -94,8 +100,8 @@
 
   .nav { display:flex; gap:8px; flex-wrap:wrap; }
   .nav-btn {
-    flex:1 1 45%; min-width:120px; padding:13px; border-radius:10px; border:2px solid var(--border);
-    background:var(--panel); color:var(--text); font-size:14px; cursor:pointer; transition:all 0.15s;
+    flex:1 1 45%; min-width:120px; padding:13px; border-radius:999px; border:2px solid var(--border);
+    background:var(--panel); color:var(--text); font-size:14px; font-weight:600; cursor:pointer; transition:all 0.15s;
   }
   .nav-btn:active { transform:scale(0.98); }
   .nav-btn:disabled { opacity:0.35; }
@@ -110,13 +116,13 @@
   .empty strong { color:var(--green); font-size:18px; display:block; margin-bottom:8px; }
 
   /* ---- MC Trainer ---- */
-  .mc-card { background:var(--panel); border:2px solid var(--border); border-radius:16px; padding:22px; }
+  .mc-card { background:var(--panel); border:2px solid var(--border); border-radius:22px; padding:22px; box-shadow:5px 5px 0 var(--border); }
   .mc-instruction { font-size:12px; color:var(--amber); margin-bottom:10px; font-weight:700; }
   .mc-q { font-family:var(--font-heading); font-size:20px; font-weight:700; letter-spacing:-0.2px; line-height:1.35; margin-bottom:18px; }
   .mc-opts { display:flex; flex-direction:column; gap:9px; }
   .opt {
     display:flex; align-items:flex-start; gap:11px; padding:13px 14px;
-    background:var(--panel2); border:2px solid var(--border); border-radius:10px;
+    background:var(--panel2); border:2px solid var(--border); border-radius:14px;
     cursor:pointer; transition:all 0.12s; font-size:14.5px; line-height:1.4;
   }
   .opt:active { transform:scale(0.99); }
@@ -135,7 +141,7 @@
   .opt .tag-mini { font-size:10px; text-transform:uppercase; letter-spacing:0.5px; margin-left:6px; opacity:0.85; }
 
   .mc-actions { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
-  .mc-btn { flex:1 1 45%; min-width:130px; padding:13px; border-radius:10px; border:2px solid var(--border); font-size:14px; font-weight:700; cursor:pointer; transition:all 0.15s; }
+  .mc-btn { flex:1 1 45%; min-width:130px; padding:13px; border-radius:999px; border:2px solid var(--border); font-size:14px; font-weight:700; cursor:pointer; transition:all 0.15s; }
   .mc-btn:active { transform:scale(0.98); }
   .mc-check { background:var(--accent); color:#fff; border-color:var(--border); }
   .mc-check:disabled { opacity:0.4; }
@@ -149,7 +155,7 @@
   .fb-score { font-weight:700; font-size:15px; }
 
   .mc-stats { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
-  .stat { flex:1 1 30%; min-width:90px; background:var(--panel); border:2px solid var(--border); border-radius:10px; padding:11px; text-align:center; }
+  .stat { flex:1 1 30%; min-width:90px; background:var(--panel); border:2px solid var(--border); border-radius:16px; padding:11px; text-align:center; }
   .stat .num { font-family:var(--font-heading); font-size:22px; font-weight:700; }
   .stat .lbl { font-size:11px; color:var(--text-dim); margin-top:2px; }
   .num-green { color:var(--green); } .num-amber { color:var(--amber); } .num-accent { color:var(--accent); }
@@ -161,7 +167,7 @@
   .syncbar {
     display:flex; align-items:center; gap:9px;
     background:var(--panel); border:2px solid var(--border);
-    border-radius:10px; padding:9px 11px; margin-bottom:12px;
+    border-radius:999px; padding:9px 15px; margin-bottom:12px;
   }
   .sync-dot { width:9px; height:9px; border-radius:50%; background:var(--text-dim); flex-shrink:0; }
   .sync-dot.ok { background:var(--green); }
@@ -170,7 +176,7 @@
   .sync-text { font-size:12.5px; color:var(--text-dim); }
   .syncpanel {
     display:none; background:var(--panel); border:2px solid var(--border);
-    border-radius:12px; padding:13px; margin-bottom:14px;
+    border-radius:18px; padding:13px; margin-bottom:14px;
   }
   .syncpanel.open { display:block; }
   .sync-hint { font-size:12.5px; color:var(--text-dim); line-height:1.5; margin-bottom:10px; }
@@ -178,7 +184,7 @@
   .sync-row { display:flex; gap:8px; flex-wrap:wrap; }
   .sync-row input {
     flex:1 1 160px; background:var(--panel2); border:2px solid var(--border);
-    color:var(--text); border-radius:8px; padding:9px 11px; font-size:13.5px;
+    color:var(--text); border-radius:999px; padding:9px 15px; font-size:13.5px;
   }
   .sync-row input:focus { outline:none; border-color:var(--accent); }
   .sync-msg { font-size:12.5px; margin-top:10px; line-height:1.5; }
@@ -187,7 +193,8 @@
 
   @media (max-width:560px){
     body { padding:12px; }
-    h1 { font-size:17px; }
+    header { padding:16px 17px; box-shadow:4px 4px 0 var(--border); }
+    h1 { font-size:19px; }
     .face, .card, .face.back, .card-area .face { min-height:280px; }
     .face { padding:20px; }
     .q-text { font-size:17px; }
