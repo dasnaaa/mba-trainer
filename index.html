@@ -193,22 +193,6 @@
   .sync-dot.err { background:var(--red); }
   .sync-dot.busy { background:var(--amber); }
   .sync-text { font-size:12.5px; color:var(--text-dim); }
-  .syncpanel {
-    display:none; background:var(--panel); border:2px solid var(--border);
-    border-radius:18px; padding:13px; margin-bottom:14px;
-  }
-  .syncpanel.open { display:block; }
-  .sync-hint { font-size:12.5px; color:var(--text-dim); line-height:1.5; margin-bottom:10px; }
-  .sync-hint code { background:var(--panel2); padding:1px 5px; border-radius:4px; }
-  .sync-row { display:flex; gap:8px; flex-wrap:wrap; }
-  .sync-row input {
-    flex:1 1 160px; background:var(--panel2); border:2px solid var(--border);
-    color:var(--text); border-radius:999px; padding:9px 15px; font-size:13.5px;
-  }
-  .sync-row input:focus { outline:none; border-color:var(--accent); }
-  .sync-msg { font-size:12.5px; margin-top:10px; line-height:1.5; }
-  .sync-msg.ok { color:var(--green); }
-  .sync-msg.err { color:var(--red); }
 
   @media (max-width:560px){
     body { padding:12px; }
@@ -245,22 +229,9 @@
 
   <div class="syncbar">
     <span class="sync-dot" id="syncDot"></span>
-    <span class="sync-text" id="syncText">Lernstand: nur auf diesem Gerät</span>
+    <span class="sync-text" id="syncText">Lernstand: wird synchronisiert …</span>
     <span class="spacer"></span>
-    <button class="btn" id="syncCog">⚙︎ Sync</button>
-  </div>
-  <div class="syncpanel" id="syncPanel">
-    <div class="sync-hint">Sync-Token eingeben (dasselbe wie in Cloudflare unter <code>SYNC_TOKEN</code> hinterlegt) — dann wird dein Lernstand serverseitig gespeichert und über alle Geräte synchronisiert.</div>
-    <div class="sync-row">
-      <input type="password" id="syncToken" placeholder="Sync-Token" autocomplete="off">
-      <button class="btn" id="syncSave">Verbinden</button>
-    </div>
-    <div class="sync-row" style="margin-top:8px;">
-      <button class="btn" id="syncPull">↓ Vom Server laden</button>
-      <button class="btn" id="syncPush">↑ Jetzt hochladen</button>
-      <button class="btn" id="syncOff">Trennen</button>
-    </div>
-    <div class="sync-msg" id="syncMsg"></div>
+    <button class="btn hidden" id="syncRetry">↻ Erneut versuchen</button>
   </div>
 
   <!-- ============ FLASHCARD MODE ============ -->
@@ -503,9 +474,8 @@ const STORAGE_KEY='db_lerntool_v2';
 let known=new Set(), review=new Set();
 let mcStats={done:0, sum:0, under:0};
 
-const SYNC_URL='/sync';             // Cloudflare Pages Function (functions/sync.js)
-const TOKEN_KEY='db_sync_token';
-let syncToken=null, lastUpdated=0, pushTimer=null;
+const SYNC_URL='/sync';             // Worker-Route, hinter Basic Auth
+let lastUpdated=0, pushTimer=null;
 
 function currentState(){
   return {known:[...known], review:[...review], mc:mcStats, updatedAt:lastUpdated};
@@ -523,39 +493,35 @@ function writeLocal(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(currentState())); }catch(e){}
 }
 function setSyncStatus(cls,text){
-  const d=document.getElementById('syncDot'), t=document.getElementById('syncText');
+  const d=document.getElementById('syncDot'), t=document.getElementById('syncText'), r=document.getElementById('syncRetry');
   if(d) d.className='sync-dot'+(cls?' '+cls:'');
   if(t) t.textContent=text;
+  if(r) r.classList.toggle('hidden', cls!=='err');
 }
 
 async function serverGet(){
-  const r=await fetch(SYNC_URL,{headers:{'X-Sync-Token':syncToken},cache:'no-store'});
-  if(r.status===403) throw new Error('Token abgelehnt (403)');
+  const r=await fetch(SYNC_URL,{cache:'no-store'});
   if(!r.ok) throw new Error('Server-Fehler '+r.status);
   const j=await r.json();
   return j.data;
 }
 async function serverPut(){
-  const r=await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json','X-Sync-Token':syncToken},body:JSON.stringify(currentState())});
-  if(r.status===403) throw new Error('Token abgelehnt (403)');
+  const r=await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(currentState())});
   if(!r.ok) throw new Error('Server-Fehler '+r.status);
   return r.json();
 }
 function schedulePush(){
-  if(!syncToken) return;
   clearTimeout(pushTimer);
   setSyncStatus('busy','Lernstand: wird gespeichert …');
   pushTimer=setTimeout(async()=>{
-    try{ await serverPut(); setSyncStatus('ok','Lernstand: am Server gespeichert'); }
-    catch(e){ setSyncStatus('err','Lernstand: Server nicht erreichbar (lokal gesichert)'); }
+    try{ await serverPut(); setSyncStatus('ok','Lernstand: synchron über alle Geräte'); }
+    catch(e){ setSyncStatus('err','Server nicht erreichbar (lokal gesichert)'); }
   },1200);
 }
 
 async function loadState(){
   const local=readLocal();
   if(local) applyState(local);
-  try{ syncToken=localStorage.getItem(TOKEN_KEY)||null; }catch(e){}
-  if(!syncToken){ setSyncStatus('','Lernstand: nur auf diesem Gerät'); return; }
   try{
     const remote=await serverGet();
     if(remote && (remote.updatedAt||0) > (local?local.updatedAt||0:0)){
@@ -563,12 +529,12 @@ async function loadState(){
       setSyncStatus('ok','Lernstand: vom Server geladen');
     } else if(local && (!remote || (local.updatedAt||0) > (remote.updatedAt||0))){
       await serverPut();
-      setSyncStatus('ok','Lernstand: am Server gespeichert');
+      setSyncStatus('ok','Lernstand: synchron über alle Geräte');
     } else {
-      setSyncStatus('ok','Lernstand: synchron');
+      setSyncStatus('ok','Lernstand: synchron über alle Geräte');
     }
   }catch(e){
-    setSyncStatus('err','Lernstand: Server nicht erreichbar (lokal)');
+    setSyncStatus('err','Server nicht erreichbar (lokal gesichert)');
   }
 }
 
@@ -899,49 +865,8 @@ document.getElementById('modeSkript').onclick=()=>setMode('skript');
 document.getElementById('skriptResumeBtn').onclick=skriptResume;
 document.getElementById('skriptBookmarkBtn').onclick=skriptBookmark;
 
-/* ---- Sync-Bedienung ---- */
-function syncMsg(cls,text){ const m=document.getElementById('syncMsg'); m.className='sync-msg'+(cls?' '+cls:''); m.textContent=text; }
-document.getElementById('syncCog').onclick=()=>{
-  const p=document.getElementById('syncPanel'); p.classList.toggle('open');
-  if(p.classList.contains('open')&&syncToken) document.getElementById('syncToken').value=syncToken;
-};
-document.getElementById('syncSave').onclick=async()=>{
-  const v=document.getElementById('syncToken').value.trim();
-  if(!v){ syncMsg('err','Bitte Token eingeben.'); return; }
-  syncToken=v;
-  try{ localStorage.setItem(TOKEN_KEY,v); }catch(e){}
-  syncMsg('','Verbinde …');
-  try{
-    const remote=await serverGet();
-    if(remote && (remote.updatedAt||0) > lastUpdated){
-      applyState(remote); writeLocal(); renderFlash(); renderMcStats();
-      syncMsg('ok','Verbunden. Lernstand vom Server übernommen.');
-    } else {
-      await serverPut();
-      syncMsg('ok','Verbunden. Lernstand am Server gespeichert.');
-    }
-    setSyncStatus('ok','Lernstand: synchron');
-  }catch(e){ setSyncStatus('err','Lernstand: nicht verbunden'); syncMsg('err','Fehler: '+e.message); }
-};
-document.getElementById('syncPull').onclick=async()=>{
-  if(!syncToken){ syncMsg('err','Erst Token eingeben.'); return; }
-  try{ const remote=await serverGet();
-    if(!remote){ syncMsg('err','Am Server ist noch kein Lernstand gespeichert.'); return; }
-    applyState(remote); writeLocal(); renderFlash(); renderMcStats();
-    syncMsg('ok','Lernstand vom Server geladen.'); setSyncStatus('ok','Lernstand: synchron');
-  }catch(e){ syncMsg('err','Fehler: '+e.message); }
-};
-document.getElementById('syncPush').onclick=async()=>{
-  if(!syncToken){ syncMsg('err','Erst Token eingeben.'); return; }
-  try{ lastUpdated=Date.now(); writeLocal(); await serverPut();
-    syncMsg('ok','Lernstand hochgeladen.'); setSyncStatus('ok','Lernstand: am Server gespeichert');
-  }catch(e){ syncMsg('err','Fehler: '+e.message); }
-};
-document.getElementById('syncOff').onclick=()=>{
-  syncToken=null; try{ localStorage.removeItem(TOKEN_KEY); }catch(e){}
-  setSyncStatus('','Lernstand: nur auf diesem Gerät');
-  syncMsg('','Getrennt. Fortschritt bleibt lokal erhalten.');
-};
+/* ---- Sync-Bedienung (läuft automatisch, kein Token nötig) ---- */
+document.getElementById('syncRetry').onclick=()=>{ loadState().then(()=>{renderFlash(); renderMcStats();}); };
 
 document.addEventListener('keydown',e=>{
   if(!document.getElementById('flashMode').classList.contains('hidden')){

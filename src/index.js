@@ -3,8 +3,9 @@
    ---------------------------------------------------------
    - Basic Auth (BASIC_AUTH_USER / BASIC_AUTH_PASS) vor jeder
      Anfrage, inkl. statischer Assets und /sync
-   - /sync: Lernstand-Sync in KV (Binding PROGRESS), geschützt
-     zusätzlich per SYNC_TOKEN (>= 12 Zeichen)
+   - /sync: Lernstand-Sync in KV (Binding PROGRESS) — durch die
+     Basic Auth oben bereits abgesichert, kein separates Token
+     nötig, läuft dadurch für jede:n eingeloggte:n automatisch
    - alles andere: Auslieferung der statischen Dateien (assets)
    ========================================================= */
 
@@ -62,20 +63,8 @@ function isAuthorized(request, env) {
 }
 
 async function handleSync(request, env) {
-  const configured = env.SYNC_TOKEN || '';
-  if (configured.length < 12) {
-    return json({ error: 'token not configured — SYNC_TOKEN als Secret setzen (>= 12 Zeichen)' }, 500);
-  }
   if (!env.PROGRESS) {
     return json({ error: 'KV nicht gebunden — Namespace an Variable PROGRESS binden' }, 500);
-  }
-
-  const given =
-    request.headers.get('X-Sync-Token') ||
-    new URL(request.url).searchParams.get('token') ||
-    '';
-  if (!safeEqual(given, configured)) {
-    return json({ error: 'forbidden' }, 403);
   }
 
   if (request.method === 'GET') {
