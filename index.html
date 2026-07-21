@@ -163,6 +163,25 @@
 
   .hidden { display:none !important; }
 
+  /* ---- Skript / Lesemodus ---- */
+  .skript-toolbar {
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    background:var(--panel); border:2px solid var(--border);
+    border-radius:999px; padding:9px 9px 9px 16px; margin-bottom:14px;
+    position:sticky; top:8px; z-index:5;
+  }
+  .skript-resume-label { font-size:12px; color:var(--text-dim); }
+  .skript-card {
+    background:var(--panel); border:2px solid var(--border); border-radius:22px;
+    padding:26px; box-shadow:5px 5px 0 var(--border);
+  }
+  .skript-section { padding-bottom:24px; margin-bottom:24px; border-bottom:2px dashed var(--border); }
+  .skript-section:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
+  .skript-h { font-family:var(--font-heading); font-size:25px; margin-bottom:12px; }
+  .skript-section p { font-size:15.5px; line-height:1.75; color:var(--text); margin-bottom:14px; }
+  .skript-section p:last-child { margin-bottom:0; }
+  .skript-placeholder { font-style:italic; color:var(--text-dim); }
+
   /* ---- Sync ---- */
   .syncbar {
     display:flex; align-items:center; gap:9px;
@@ -195,6 +214,10 @@
     body { padding:12px; }
     header { padding:16px 17px; box-shadow:4px 4px 0 var(--border); }
     h1 { font-size:24px; }
+    .modeswitch button { font-size:11.5px; padding:9px 4px; }
+    .skript-toolbar { padding:9px 9px 9px 13px; }
+    .skript-card { padding:18px; }
+    .skript-h { font-size:21px; }
     .face, .card, .face.back, .card-area .face { min-height:280px; }
     .face { padding:20px; }
     .q-text { font-size:21px; }
@@ -217,6 +240,7 @@
   <div class="modeswitch">
     <button id="modeFlash" class="active">📇 Karteikarten</button>
     <button id="modeMc">✅ MC-Trainer</button>
+    <button id="modeSkript">📖 Skript</button>
   </div>
 
   <div class="syncbar">
@@ -321,6 +345,20 @@
       <div class="mc-feedback" id="mcFb"></div>
     </div>
     <div class="mc-counter" id="mcCounter">1 / 0</div>
+  </div>
+
+  <!-- ============ SKRIPT MODE ============ -->
+  <div id="skriptMode" class="hidden">
+    <div class="controls">
+      <div class="chapters" id="skriptChapters"></div>
+    </div>
+    <div class="skript-toolbar">
+      <span class="skript-resume-label" id="skriptResumeLabel"></span>
+      <span class="spacer"></span>
+      <button class="btn" id="skriptResumeBtn">↩ Weiterlesen</button>
+      <button class="btn" id="skriptBookmarkBtn">🔖 Lesezeichen setzen</button>
+    </div>
+    <div class="skript-card" id="skriptContent"></div>
   </div>
 </div>
 
@@ -718,14 +756,92 @@ function mcNext(){
   mcSelected.clear(); mcChecked=false; renderMc();
 }
 
+/* ===================== SKRIPT / LESEMODUS ===================== */
+// Platzhalter — hier den tatsächlichen Skripttext pro Kapitel einfügen (als HTML-Absätze).
+const SKRIPT = [
+  {c:"1 · Grundlagen", html:'<p class="skript-placeholder">[ Skripttext für Kapitel 1 · Grundlagen hier einfügen ]</p>'},
+  {c:"2 · Arbeitsmarkt", html:'<p class="skript-placeholder">[ Skripttext für Kapitel 2 · Arbeitsmarkt hier einfügen ]</p>'},
+  {c:"3 · Beschleuniger", html:'<p class="skript-placeholder">[ Skripttext für Kapitel 3 · Beschleuniger hier einfügen ]</p>'},
+  {c:"4 · Technologien", html:'<p class="skript-placeholder">[ Skripttext für Kapitel 4 · Technologien hier einfügen ]</p>'},
+  {c:"5 · Innovation", html:'<p class="skript-placeholder">[ Skripttext für Kapitel 5 · Innovation hier einfügen ]</p>'},
+  {c:"6 · Case Studies", html:'<p class="skript-placeholder">[ Skripttext für Kapitel 6 · Case Studies hier einfügen ]</p>'},
+];
+const SKRIPT_POS_KEY='db_skript_pos';
+let skriptBuilt=false;
+
+function buildSkriptChapters(){
+  const el=document.getElementById('skriptChapters'); el.innerHTML='';
+  SKRIPT.forEach((s,i)=>{
+    const c=document.createElement('div'); c.className='chip'; c.textContent=s.c;
+    c.onclick=()=>{ const sec=document.getElementById('skriptSec-'+i); if(sec) sec.scrollIntoView({behavior:'smooth',block:'start'}); };
+    el.appendChild(c);
+  });
+}
+function buildSkriptContent(){
+  const el=document.getElementById('skriptContent'); el.innerHTML='';
+  SKRIPT.forEach((s,i)=>{
+    const sec=document.createElement('div'); sec.className='skript-section'; sec.id='skriptSec-'+i;
+    sec.innerHTML=`<div class="skript-h">${s.c}</div>${s.html}`;
+    el.appendChild(sec);
+  });
+}
+function readSkriptPos(){
+  try{ const v=localStorage.getItem(SKRIPT_POS_KEY); return v?JSON.parse(v):null; }catch(e){ return null; }
+}
+function writeSkriptPos(pos){
+  try{ localStorage.setItem(SKRIPT_POS_KEY, JSON.stringify(pos)); }catch(e){}
+}
+function currentSkriptSectionIndex(){
+  let best=0;
+  SKRIPT.forEach((s,i)=>{
+    const sec=document.getElementById('skriptSec-'+i);
+    if(sec && sec.getBoundingClientRect().top-90<=0) best=i;
+  });
+  return best;
+}
+function updateSkriptResumeLabel(){
+  const pos=readSkriptPos();
+  const lbl=document.getElementById('skriptResumeLabel');
+  lbl.textContent=(pos && SKRIPT[pos.i]) ? 'Zuletzt gelesen: '+SKRIPT[pos.i].c : 'Noch kein Lesezeichen gesetzt';
+}
+let skriptScrollTimer=null;
+function onSkriptScroll(){
+  if(document.getElementById('skriptMode').classList.contains('hidden')) return;
+  clearTimeout(skriptScrollTimer);
+  skriptScrollTimer=setTimeout(()=>{
+    writeSkriptPos({i:currentSkriptSectionIndex(), y:window.scrollY});
+    updateSkriptResumeLabel();
+  },400);
+}
+function skriptResume(){
+  const pos=readSkriptPos();
+  if(pos && typeof pos.y==='number') window.scrollTo({top:pos.y, behavior:'smooth'});
+}
+function skriptBookmark(){
+  writeSkriptPos({i:currentSkriptSectionIndex(), y:window.scrollY});
+  updateSkriptResumeLabel();
+  const btn=document.getElementById('skriptBookmarkBtn'); const old=btn.textContent;
+  btn.textContent='✓ Gesetzt';
+  setTimeout(()=>{btn.textContent=old;},1400);
+}
+window.addEventListener('scroll', onSkriptScroll, {passive:true});
+
 /* ===================== MODE SWITCH ===================== */
 function setMode(m){
-  const f=document.getElementById('flashMode'), c=document.getElementById('mcMode');
+  const f=document.getElementById('flashMode'), c=document.getElementById('mcMode'), s=document.getElementById('skriptMode');
   document.getElementById('modeFlash').classList.toggle('active',m==='flash');
   document.getElementById('modeMc').classList.toggle('active',m==='mc');
+  document.getElementById('modeSkript').classList.toggle('active',m==='skript');
   f.classList.toggle('hidden',m!=='flash');
   c.classList.toggle('hidden',m!=='mc');
+  s.classList.toggle('hidden',m!=='skript');
   if(m==='mc'){ if(!mcDeck.length) buildMcDeck(); renderMc(); }
+  else if(m==='skript'){
+    if(!skriptBuilt){ buildSkriptChapters(); buildSkriptContent(); skriptBuilt=true; }
+    updateSkriptResumeLabel();
+    const pos=readSkriptPos();
+    requestAnimationFrame(()=>{ if(pos && typeof pos.y==='number') window.scrollTo({top:pos.y}); });
+  }
   else renderFlash();
 }
 
@@ -747,6 +863,9 @@ document.getElementById('mcReset').onclick=()=>{ if(confirm('MC-Statistik lösch
 
 document.getElementById('modeFlash').onclick=()=>setMode('flash');
 document.getElementById('modeMc').onclick=()=>setMode('mc');
+document.getElementById('modeSkript').onclick=()=>setMode('skript');
+document.getElementById('skriptResumeBtn').onclick=skriptResume;
+document.getElementById('skriptBookmarkBtn').onclick=skriptBookmark;
 
 /* ---- Sync-Bedienung ---- */
 function syncMsg(cls,text){ const m=document.getElementById('syncMsg'); m.className='sync-msg'+(cls?' '+cls:''); m.textContent=text; }
