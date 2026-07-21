@@ -182,6 +182,31 @@
   .skript-section p:last-child { margin-bottom:0; }
   .skript-placeholder { font-style:italic; color:var(--text-dim); }
 
+  /* ---- Audio ---- */
+  .audio-bar {
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    background:var(--panel); border:2px solid var(--border);
+    border-radius:18px; padding:14px 16px; margin-bottom:16px;
+    position:sticky; top:8px; z-index:5; box-shadow:4px 4px 0 var(--border);
+  }
+  .audio-np { flex:1 1 200px; min-width:0; }
+  .audio-np-label { font-size:10.5px; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); }
+  .audio-np-title { font-family:var(--font-heading); font-size:18px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #audioEl { flex:1 1 260px; min-width:0; height:36px; }
+  .audio-group { margin-bottom:18px; }
+  .audio-group-h { font-family:var(--font-heading); font-size:19px; margin-bottom:9px; }
+  .audio-list { display:flex; flex-direction:column; gap:7px; }
+  .audio-row {
+    display:flex; align-items:center; gap:11px; padding:11px 15px;
+    background:var(--panel); border:2px solid var(--border); border-radius:14px;
+    cursor:pointer; transition:all 0.12s; font-size:14px;
+  }
+  .audio-row:active { transform:scale(0.99); }
+  .audio-row .audio-play-ic { flex-shrink:0; font-size:12px; color:var(--text-dim); }
+  .audio-row.playing { background:rgba(41,82,227,0.10); border-color:var(--accent); }
+  .audio-row.playing .audio-play-ic { color:var(--accent); }
+  .audio-row .audio-title { flex:1; }
+
   /* ---- Sync ---- */
   .syncbar {
     display:flex; align-items:center; gap:9px;
@@ -198,7 +223,9 @@
     body { padding:12px; }
     header { padding:16px 17px; box-shadow:4px 4px 0 var(--border); }
     h1 { font-size:24px; }
-    .modeswitch button { font-size:11.5px; padding:9px 4px; }
+    .modeswitch button { font-size:10px; padding:8px 2px; }
+    .audio-bar { padding:12px; gap:10px; }
+    .audio-np-title { font-size:16px; }
     .skript-toolbar { padding:9px 9px 9px 13px; }
     .skript-card { padding:18px; }
     .skript-h { font-size:21px; }
@@ -225,6 +252,7 @@
     <button id="modeFlash" class="active">📇 Karteikarten</button>
     <button id="modeMc">✅ MC-Trainer</button>
     <button id="modeSkript">📖 Skript</button>
+    <button id="modeAudio">🎧 Audio</button>
   </div>
 
   <div class="syncbar">
@@ -330,6 +358,25 @@
       <button class="btn" id="skriptBookmarkBtn">🔖 Lesezeichen setzen</button>
     </div>
     <div class="skript-card" id="skriptContent"></div>
+  </div>
+
+  <!-- ============ AUDIO MODE ============ -->
+  <div id="audioMode" class="hidden">
+    <div class="audio-bar">
+      <div class="audio-np">
+        <div class="audio-np-label">Wird gespielt</div>
+        <div class="audio-np-title" id="audioNowPlaying">Kein Titel ausgewählt</div>
+      </div>
+      <audio id="audioEl" controls preload="none"></audio>
+    </div>
+    <div class="audio-group">
+      <div class="audio-group-h">Kursteile</div>
+      <div class="audio-list" id="audioListMain"></div>
+    </div>
+    <div class="audio-group">
+      <div class="audio-group-h">Podcast-Episoden</div>
+      <div class="audio-list" id="audioListPodcast"></div>
+    </div>
   </div>
 </div>
 
@@ -824,21 +871,122 @@ function skriptBookmark(){
 }
 window.addEventListener('scroll', onSkriptScroll, {passive:true});
 
+/* ===================== AUDIO ===================== */
+// Direkte Streaming-Links aus dem geteilten Dropbox-Ordner (dl=1 = Rohdaten mit Range-Support).
+const AUDIO_MAIN = [
+  {t:"Teil 1", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/APC5fc45RcuY71GaSlTr-AU/m01-LV01/ELG_Business_Innovation_Teil1_MP3_.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Teil 2", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/AO2O76A7oP8hM7VNIHFUK5c/m01-LV01/ELG_Business_Innovation_Teil2_MP3_.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Teil 3", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/AMVoUVZ66Kbs2oQ7H3NsgMk/m01-LV01/ELG_Business_Innovation_Teil3_MP3_.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Teil 4", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/ALGiQ0t5E2_JP64CCIsnvAc/m01-LV01/ELG_Business_Innovation_Teil4_MP3_.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+];
+const AUDIO_PODCAST = [
+  {t:"Geschäftsmodell Angst - das Y-Modell", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/ANb3sfq2J9U2xjjLDas63YY/m01-LV01/Podcast/Gesch%C3%A4ftsmodell%20Angst%20-%20das%20Y-Modell.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Kann man Trendflops verhindern", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/AGXWEuji2GTcvUimxCq7yLI/m01-LV01/Podcast/Kann%20man%20Trendflops%20verhindern.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Können wir die Digitalisierung nutzen, um die Klimakrise abzuwenden", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/ADohW7fQBCNHfTIMawB_Jl0/m01-LV01/Podcast/K%C3%B6nnen%20wir%20die%20Digitalisierung%20nutzen%2C%20um%20die%20Klimakrise%20abzuwenden.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Megatrends verdrängte Trends", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/ACdY2lI67e6gB4cTNJtGSuA/m01-LV01/Podcast/Megatrends%20%20verdr%C3%A4ngte%20Trends.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Sind Fußball und die WM für Trendforschung relevant", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/AOOUlX2Wvi6E69AOvHbFU3A/m01-LV01/Podcast/Sind%20Fu%C3%9Fball%20und%20die%20WM%20f%C3%BCr%20Trendforschung%20relevant.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Sollen Unternehmen die bessere NSA werden", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/AEvqDfJKYSV6HMTMYMX3j3s/m01-LV01/Podcast/Sollen%20Unternehmen%20die%20bessere%20NSA%20werden_1.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Trends: Ein Appetithappen", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/AAng_96zgNT-EbD3MKF7Tvk/m01-LV01/Podcast/Trends%20Ein%20Appetithappen.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Über Wellness, Scheitern & korrupte Trends", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/AIAtSojiRXVLXVrReQFEsbE/m01-LV01/Podcast/%C3%9Cber%20Wellness%2C%20Scheitern%20%20korrupte%20Trends.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Was benötigen wir in Zukunft, um Erfolg zu haben", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/AO5pARy8r8yhb4JEwXPqbao/m01-LV01/Podcast/Was%20ben%C3%B6tigen%20wir%20in%20Zukunft%20um%20Erfolg%20zu%20haben.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Was ist Trendforschung", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/AH8TVSyZ9anQVM34HGZkGG8/m01-LV01/Podcast/Was%20ist%20Trendforschung.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Was können wir vom Scheitern lernen", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/APbACxpAmQVecKvhTNd9znI/m01-LV01/Podcast/Was%20k%C3%B6nnen%20wir%20vom%20Scheitern%20lernen.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Was sind Trendflops", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/AAL0p9uf5N1OGkOivSSAlB8/m01-LV01/Podcast/Was%20sind%20Trendflops.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Was, wenn ein Trend kein Trend ist", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/ADk0V3BG3LrqxxVlhz0fXuw/m01-LV01/Podcast/Was%2C%20wenn%20ein%20Trend%20kein%20Trend%20ist.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Welche Arten von Trends gibt es", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/AFOMwmA5gDN7sl0xLbLgeN0/m01-LV01/Podcast/Welche%20Arten%20von%20Trends%20gibt%20es.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Wie erkennt man einen Trend", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/AK0j6zkYFUMh-xDuWObq3RY/m01-LV01/Podcast/Wie%20erkennt%20man%20einen%20Trend.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Wie hängen Digitalisierung und Demokratie zusammen", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/ADNuOfq4BDJK-cv2v2wNFas/m01-LV01/Podcast/Wie%20h%C3%A4ngen%20Digitalisierung%20und%20Demokratie%20zusammen.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Wie können Sie davon profitieren", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/AKq0WrYS5iSOZtr9LEmaLmo/m01-LV01/Podcast/Wie%20k%C3%B6nnen%20Sie%20davon%20profitieren.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Wie orientiert man sich an Trends", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/AEnD1yIMfDpgaEh6jjM6CoM/m01-LV01/Podcast/Wie%20orientiert%20man%20sich%20an%20Trends.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+  {t:"Wie sehen wir der Zukunft entgegen", url:"https://www.dropbox.com/scl/fo/1qkmcwgouzgu2xbrkzygo/AGlBpAwwixmjoibm2zT7Zko/m01-LV01/Podcast/Wie%20sehen%20wir%20der%20Zukunft%20entgegen.mp3?rlkey=6io6wi7175neyggzlforh8xm9&dl=1"},
+];
+
+const AUDIO_POS_KEY='db_audio_pos';
+let audioBuilt=false, audioCurrentKey=null, audioSaveTimer=null;
+
+function trackByKey(key){
+  const idx=key.indexOf(':'); const g=key.slice(0,idx), i=+key.slice(idx+1);
+  return g==='main' ? AUDIO_MAIN[i] : AUDIO_PODCAST[i];
+}
+function highlightAudioRow(key){
+  document.querySelectorAll('.audio-row').forEach(r=>r.classList.toggle('playing', r.dataset.key===key));
+}
+function formatTime(s){
+  s=Math.floor(s||0); const m=Math.floor(s/60), sec=s%60;
+  return m+':'+String(sec).padStart(2,'0');
+}
+function saveAudioPos(){
+  if(!audioCurrentKey) return;
+  const el=document.getElementById('audioEl');
+  try{ localStorage.setItem(AUDIO_POS_KEY, JSON.stringify({key:audioCurrentKey, time:el.currentTime||0})); }catch(e){}
+}
+function readAudioPos(){
+  try{ const v=localStorage.getItem(AUDIO_POS_KEY); return v?JSON.parse(v):null; }catch(e){ return null; }
+}
+function playAudio(groupKey, idx){
+  const key=groupKey+':'+idx;
+  const track=trackByKey(key);
+  if(!track) return;
+  const el=document.getElementById('audioEl');
+  audioCurrentKey=key;
+  el.src=track.url;
+  document.getElementById('audioNowPlaying').textContent=track.t;
+  highlightAudioRow(key);
+  el.play().catch(()=>{});
+}
+function buildAudioLists(){
+  const renderList=(elId, arr, groupKey)=>{
+    const el=document.getElementById(elId); el.innerHTML='';
+    arr.forEach((a,i)=>{
+      const row=document.createElement('div');
+      row.className='audio-row'; row.dataset.key=groupKey+':'+i;
+      row.innerHTML=`<span class="audio-play-ic">▶</span><span class="audio-title">${a.t}</span>`;
+      row.onclick=()=>playAudio(groupKey,i);
+      el.appendChild(row);
+    });
+  };
+  renderList('audioListMain', AUDIO_MAIN, 'main');
+  renderList('audioListPodcast', AUDIO_PODCAST, 'podcast');
+}
+function restoreAudioIfAny(){
+  const pos=readAudioPos();
+  if(!pos) return;
+  const track=trackByKey(pos.key);
+  if(!track) return;
+  audioCurrentKey=pos.key;
+  const el=document.getElementById('audioEl');
+  el.src=track.url;
+  document.getElementById('audioNowPlaying').textContent=track.t+' — weiter ab '+formatTime(pos.time);
+  el.addEventListener('loadedmetadata', function once(){ el.currentTime=pos.time||0; el.removeEventListener('loadedmetadata',once); }, {once:true});
+  highlightAudioRow(pos.key);
+}
+(function(){
+  const el=document.getElementById('audioEl');
+  el.addEventListener('timeupdate', ()=>{ clearTimeout(audioSaveTimer); audioSaveTimer=setTimeout(saveAudioPos,2000); });
+  el.addEventListener('pause', saveAudioPos);
+})();
+
 /* ===================== MODE SWITCH ===================== */
 function setMode(m){
-  const f=document.getElementById('flashMode'), c=document.getElementById('mcMode'), s=document.getElementById('skriptMode');
+  const f=document.getElementById('flashMode'), c=document.getElementById('mcMode'),
+        s=document.getElementById('skriptMode'), a=document.getElementById('audioMode');
   document.getElementById('modeFlash').classList.toggle('active',m==='flash');
   document.getElementById('modeMc').classList.toggle('active',m==='mc');
   document.getElementById('modeSkript').classList.toggle('active',m==='skript');
+  document.getElementById('modeAudio').classList.toggle('active',m==='audio');
   f.classList.toggle('hidden',m!=='flash');
   c.classList.toggle('hidden',m!=='mc');
   s.classList.toggle('hidden',m!=='skript');
+  a.classList.toggle('hidden',m!=='audio');
   if(m==='mc'){ if(!mcDeck.length) buildMcDeck(); renderMc(); }
   else if(m==='skript'){
     if(!skriptBuilt){ buildSkriptChapters(); buildSkriptContent(); skriptBuilt=true; }
     updateSkriptResumeLabel();
     const pos=readSkriptPos();
     requestAnimationFrame(()=>{ if(pos && typeof pos.y==='number') window.scrollTo({top:pos.y}); });
+  }
+  else if(m==='audio'){
+    if(!audioBuilt){ buildAudioLists(); restoreAudioIfAny(); audioBuilt=true; }
   }
   else renderFlash();
 }
@@ -862,6 +1010,7 @@ document.getElementById('mcReset').onclick=()=>{ if(confirm('MC-Statistik lösch
 document.getElementById('modeFlash').onclick=()=>setMode('flash');
 document.getElementById('modeMc').onclick=()=>setMode('mc');
 document.getElementById('modeSkript').onclick=()=>setMode('skript');
+document.getElementById('modeAudio').onclick=()=>setMode('audio');
 document.getElementById('skriptResumeBtn').onclick=skriptResume;
 document.getElementById('skriptBookmarkBtn').onclick=skriptBookmark;
 
