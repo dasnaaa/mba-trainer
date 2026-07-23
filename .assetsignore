@@ -5,3 +5,14 @@ wrangler.jsonc
 worker.jsonc
 src/
 functions/
+
+# Native-Android-Tooling (Capacitor) — nicht Teil der ausgelieferten Web-App
+android/
+scripts/
+node_modules/
+www/
+.github/
+capacitor.config.json
+package.json
+package-lock.json
+README.md
