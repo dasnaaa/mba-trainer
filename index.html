@@ -228,6 +228,30 @@
   }
   .sync-settings-actions { display:flex; gap:8px; flex-wrap:wrap; }
   .sync-settings-hint { font-size:11.5px; color:var(--text-dim); line-height:1.4; }
+
+  /* ---- Login-Gate (nur native Android-App) ---- */
+  .login-gate {
+    position:fixed; inset:0; background:var(--bg); z-index:1000;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .login-card {
+    width:100%; max-width:380px; background:var(--panel); border:2px solid var(--border);
+    border-radius:22px; padding:26px 24px; box-shadow:5px 5px 0 var(--border);
+  }
+  .login-card h2 { font-family:var(--font-heading); font-size:26px; font-weight:400; margin-bottom:6px; }
+  .login-card .sub { color:var(--text-dim); font-size:12.5px; margin-bottom:18px; }
+  .login-card input {
+    background:var(--panel2); border:2px solid var(--border); border-radius:10px;
+    padding:11px 12px; font-size:14px; color:var(--text); width:100%; font-family:inherit;
+    margin-bottom:10px;
+  }
+  .login-card .btn-primary {
+    width:100%; background:var(--accent); color:#fff; border:2px solid var(--border);
+    border-radius:999px; padding:12px; font-size:14.5px; font-weight:700; cursor:pointer; margin-top:4px;
+  }
+  .login-card .btn-primary:active { transform:scale(0.98); }
+  .login-card .btn-primary:disabled { opacity:0.6; }
+  .login-error { color:var(--red); font-size:12.5px; margin-top:10px; min-height:1.4em; }
   .sync-text { font-size:12.5px; color:var(--text-dim); }
 
   @media (max-width:560px){
@@ -253,6 +277,17 @@
 </style>
 </head>
 <body>
+<div class="login-gate hidden" id="loginGate">
+  <div class="login-card">
+    <h2>Anmelden</h2>
+    <div class="sub">Einmalig nötig, damit dein Lernstand automatisch mit deinem Server synchronisiert wird.</div>
+    <input type="url" id="gateUrlInput" placeholder="https://mba-trainer.dein-konto.workers.dev" autocapitalize="off" autocorrect="off">
+    <input type="text" id="gateUserInput" placeholder="Benutzername" autocomplete="username" autocapitalize="off" autocorrect="off">
+    <input type="password" id="gatePassInput" placeholder="Passwort" autocomplete="current-password">
+    <button class="btn-primary" id="gateLoginBtn">Anmelden</button>
+    <div class="login-error" id="gateError"></div>
+  </div>
+</div>
 <div class="app">
   <header>
     <h1>Digital <span>Business</span> — Lerntool</h1>
@@ -581,17 +616,22 @@ function setSyncStatus(cls,text){
   if(r) r.classList.toggle('hidden', cls!=='err');
 }
 
+function syncError(status){
+  const e=new Error('Server-Fehler '+status);
+  e.authFailed = (status===401);
+  return e;
+}
 async function serverGet(){
   const {url,init}=buildSyncRequest({cache:'no-store'});
   const r=await fetch(url,init);
-  if(!r.ok) throw new Error('Server-Fehler '+r.status);
+  if(!r.ok) throw syncError(r.status);
   const j=await r.json();
   return j.data;
 }
 async function serverPut(){
   const {url,init}=buildSyncRequest({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(currentState())});
   const r=await fetch(url,init);
-  if(!r.ok) throw new Error('Server-Fehler '+r.status);
+  if(!r.ok) throw syncError(r.status);
   return r.json();
 }
 function schedulePush(){
@@ -599,7 +639,10 @@ function schedulePush(){
   setSyncStatus('busy','Lernstand: wird gespeichert …');
   pushTimer=setTimeout(async()=>{
     try{ await serverPut(); setSyncStatus('ok','Lernstand: synchron über alle Geräte'); }
-    catch(e){ setSyncStatus('err','Server nicht erreichbar (lokal gesichert)'); }
+    catch(e){
+      setSyncStatus('err','Server nicht erreichbar (lokal gesichert)');
+      if(e.authFailed) handleAuthFailure();
+    }
   },1200);
 }
 
@@ -619,6 +662,7 @@ async function loadState(){
     }
   }catch(e){
     setSyncStatus('err','Server nicht erreichbar (lokal gesichert)');
+    if(e.authFailed) handleAuthFailure();
   }
 }
 
@@ -1064,11 +1108,59 @@ document.getElementById('syncRetry').onclick=()=>{ loadState().then(()=>{renderF
   document.getElementById('syncSettingsBtn').onclick=()=>panel.classList.toggle('hidden');
   document.getElementById('syncSaveBtn').onclick=()=>{
     const url=urlIn.value.trim();
-    if(url) setSyncCfg({url, user:userIn.value.trim(), pass:passIn.value});
+    if(url) setSyncCfg({url, user:userIn.value.trim(), pass:passIn.value, verified:true});
     else clearSyncCfg();
     location.reload();
   };
   document.getElementById('syncClearBtn').onclick=()=>{ clearSyncCfg(); location.reload(); };
+})();
+
+/* ---- Login-Gate: nur in der nativen Android-App, davor läuft nichts ---- */
+function isNativeApp(){
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+function showGate(){ document.getElementById('loginGate').classList.remove('hidden'); }
+function hideGate(){ document.getElementById('loginGate').classList.add('hidden'); }
+function handleAuthFailure(){
+  if(!isNativeApp()) return;   // Web-Version: Basic Auth regelt das über den Browser, hier nichts tun
+  clearSyncCfg();
+  showGate();
+}
+async function verifyLogin(url,user,pass){
+  const base=url.replace(/\/+$/,'');
+  let r;
+  try{ r=await fetch(base+'/sync',{cache:'no-store',headers:{'Authorization':'Basic '+btoa(user+':'+pass)}}); }
+  catch(e){ return {ok:false, reason:'network'}; }
+  if(r.status===401) return {ok:false, reason:'auth'};
+  if(!r.ok) return {ok:false, reason:'server'};
+  return {ok:true};
+}
+(function initLoginGate(){
+  const urlIn=document.getElementById('gateUrlInput');
+  const userIn=document.getElementById('gateUserInput');
+  const passIn=document.getElementById('gatePassInput');
+  const err=document.getElementById('gateError');
+  const btn=document.getElementById('gateLoginBtn');
+  const cfg=getSyncCfg();
+  if(cfg){ urlIn.value=cfg.url||''; userIn.value=cfg.user||''; }
+  btn.onclick=async()=>{
+    const url=urlIn.value.trim(), user=userIn.value.trim(), pass=passIn.value;
+    if(!url||!user||!pass){ err.textContent='Bitte alle Felder ausfüllen.'; return; }
+    btn.disabled=true; btn.textContent='Prüfe …'; err.textContent='';
+    const res=await verifyLogin(url,user,pass);
+    btn.disabled=false; btn.textContent='Anmelden';
+    if(res.ok){
+      setSyncCfg({url,user,pass,verified:true});
+      hideGate();
+      await loadState(); renderFlash();
+    } else if(res.reason==='auth'){
+      err.textContent='Benutzername oder Passwort falsch.';
+    } else if(res.reason==='network'){
+      err.textContent='Server nicht erreichbar. Internetverbindung prüfen und erneut versuchen.';
+    } else {
+      err.textContent='Unerwarteter Server-Fehler.';
+    }
+  };
 })();
 
 document.addEventListener('keydown',e=>{
@@ -1082,7 +1174,14 @@ document.addEventListener('keydown',e=>{
 });
 
 /* ===================== INIT ===================== */
-(async function(){ await loadState(); renderFlash(); })();
+(async function(){
+  const cfg=getSyncCfg();
+  if(isNativeApp() && !(cfg&&cfg.verified)){
+    showGate();
+    return;   // App bleibt hinter dem Login-Gate, bis initLoginGate() erfolgreich einloggt
+  }
+  await loadState(); renderFlash();
+})();
 </script>
 </body>
 </html>

@@ -39,11 +39,23 @@ cd android && ./gradlew assembleDebug
 Nach jeder Änderung an `index.html` einfach `npm run android:sync` erneut ausführen,
 bevor neu gebaut wird.
 
-### Sync in der App konfigurieren (optional)
+### Login & Sync in der App
 
 Die Android-App lädt die Assets lokal, daher greift die relative `/sync`-Route
-aus der Web-Version dort nicht automatisch. Über das ⚙-Symbol neben der
-Sync-Anzeige lassen sich Worker-URL, Benutzername und Passwort hinterlegen —
-danach synct auch die App-Version geräteübergreifend gegen denselben Worker.
-Der Worker (`src/index.js`) erlaubt dafür CORS-Anfragen von `https://localhost`
-(Capacitor-Android-Standardursprung).
+aus der Web-Version dort nicht automatisch. Beim ersten Start zeigt die App
+deshalb einen verpflichtenden Login-Screen (Worker-URL, Benutzername, Passwort —
+dieselben Zugangsdaten wie der Basic-Auth-Schutz des Workers). Nach erfolgreicher
+Prüfung wird der Login lokal gespeichert und der Lernstand synct danach automatisch
+im Hintergrund (auf jede Änderung debounced, beim App-Start abgeglichen) —
+kein erneutes Anmelden nötig, außer Zugangsdaten ändern sich oder ein Sync-Aufruf
+liefert `401` (dann erscheint der Login-Screen automatisch wieder).
+
+Über das ⚙-Symbol neben der Sync-Anzeige lassen sich URL/Zugangsdaten jederzeit
+ändern; „Zurücksetzen“ meldet die App ab (Login-Screen erscheint beim nächsten
+Start erneut). Die **Web-Version bleibt unverändert** beim Browser-Basic-Auth-Popup
+— der Login-Screen läuft ausschließlich in der nativen App
+(`window.Capacitor.isNativePlatform()`).
+
+Der Worker (`src/index.js`) erlaubt CORS-Anfragen von `https://localhost`
+(Capacitor-Android-Standardursprung), damit die App-Anfragen an `/sync` überhaupt
+ankommen.
