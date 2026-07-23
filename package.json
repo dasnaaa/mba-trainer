@@ -1,0 +1,18 @@
+{
+  "name": "mba-trainer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Digital Business Lerntool – Flashcard-Trainer (Web + native Android via Capacitor)",
+  "scripts": {
+    "sync:web": "node scripts/sync-web-assets.js",
+    "android:sync": "npm run sync:web && npx cap sync android",
+    "android:open": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/core": "^8.4.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.4.2"
+  }
+}

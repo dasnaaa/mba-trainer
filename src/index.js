@@ -12,6 +12,27 @@
 const SYNC_KEY = 'progress';
 const MAX_BYTES = 200000;
 
+// Capacitor-Android-App läuft unter diesen Ursprüngen und braucht CORS für /sync,
+// da sie die App-Assets lokal lädt statt vom Worker selbst.
+const ALLOWED_ORIGINS = new Set(['https://localhost', 'capacitor://localhost', 'http://localhost']);
+
+function corsHeaders(request) {
+  const origin = request.headers.get('Origin');
+  if (!origin || !ALLOWED_ORIGINS.has(origin)) return {};
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    'Vary': 'Origin',
+  };
+}
+
+function withCors(response, cors) {
+  const headers = new Headers(response.headers);
+  for (const [k, v] of Object.entries(cors)) headers.set(k, v);
+  return new Response(response.body, { status: response.status, headers });
+}
+
 function safeEqual(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
   let diff = 0;
@@ -93,17 +114,26 @@ async function handleSync(request, env) {
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
+    const isSync = url.pathname === '/sync';
+    const cors = isSync ? corsHeaders(request) : {};
+
+    // Preflight darf laut CORS-Spec keine Auth-Header enthalten — vor dem Basic-Auth-Check beantworten.
+    if (isSync && request.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: cors });
+    }
+
     const authResult = isAuthorized(request, env);
     if (authResult === null) {
-      return new Response(
+      const resp = new Response(
         'Passwortschutz nicht konfiguriert — BASIC_AUTH_USER und BASIC_AUTH_PASS als Secrets setzen.',
         { status: 500 }
       );
+      return isSync ? withCors(resp, cors) : resp;
     }
-    if (!authResult) return unauthorized();
+    if (!authResult) return isSync ? withCors(unauthorized(), cors) : unauthorized();
 
-    const url = new URL(request.url);
-    if (url.pathname === '/sync') return handleSync(request, env);
+    if (isSync) return withCors(await handleSync(request, env), cors);
 
     return env.ASSETS.fetch(request);
   },
