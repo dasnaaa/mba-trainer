@@ -1,0 +1,9 @@
+{
+  "appId": "com.mbatrainer.app",
+  "appName": "MBA Trainer",
+  "webDir": "www",
+  "backgroundColor": "#f7f1e4",
+  "android": {
+    "backgroundColor": "#f7f1e4"
+  }
+}

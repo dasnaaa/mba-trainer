@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MBA Trainer</string>
+    <string name="title_activity_main">MBA Trainer</string>
+    <string name="package_name">com.mbatrainer.app</string>
+    <string name="custom_url_scheme">com.mbatrainer.app</string>
+</resources>
