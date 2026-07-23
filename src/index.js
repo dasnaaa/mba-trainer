@@ -25,6 +25,7 @@ function json(obj, status = 200) {
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'no-store',
+      'X-Robots-Tag': 'noindex, nofollow',
     },
   });
 }
@@ -35,7 +36,18 @@ function unauthorized() {
     headers: {
       'WWW-Authenticate': 'Basic realm="mba-trainer", charset="UTF-8"',
       'Cache-Control': 'no-store',
+      'X-Robots-Tag': 'noindex, nofollow',
     },
+  });
+}
+
+function withNoIndex(response) {
+  const headers = new Headers(response.headers);
+  headers.set('X-Robots-Tag', 'noindex, nofollow');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
   });
 }
 
@@ -105,6 +117,6 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === '/sync') return handleSync(request, env);
 
-    return env.ASSETS.fetch(request);
+    return withNoIndex(await env.ASSETS.fetch(request));
   },
 };
